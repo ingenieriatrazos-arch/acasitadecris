@@ -9,6 +9,8 @@ exports.handler = async function(event, context) {
   try {
     const store = getStore({
       name: 'reservas',
+      siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
+      token: process.env.NETLIFY_TOKEN,
       consistency: 'strong'
     });
     
