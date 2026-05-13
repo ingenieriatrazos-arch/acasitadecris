@@ -7,18 +7,24 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    const store = getStore('reservas');
+    const store = getStore({
+      name: 'reservas',
+      consistency: 'strong'
+    });
+    
     const data = await store.get('ocupados', { type: 'json' });
+    
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify(data || { busyRanges: [] })
     };
   } catch (error) {
+    console.error('Error reading blobs:', error);
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ busyRanges: [] })
+      body: JSON.stringify({ busyRanges: [], error: error.message })
     };
   }
 };
