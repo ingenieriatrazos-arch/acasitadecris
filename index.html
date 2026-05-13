@@ -756,21 +756,27 @@ updatePriceDisplay();
 renderCalendars();
 updateBookingForm();
 
-// Load busy ranges from cloud
+// Load busy ranges from cloud — always use cloud as source of truth
 async function loadCloudAvailability() {
   try {
     var res = await fetch('/.netlify/functions/get-availability');
+    if (!res.ok) throw new Error('Network error');
     var data = await res.json();
-    if (data.busyRanges && data.busyRanges.length > 0) {
-      calCfg.busyRanges = data.busyRanges;
-      renderCalendars();
-      renderBusyList();
-    }
+    // Always use cloud data (even if empty) — cloud is the source of truth
+    calCfg.busyRanges = data.busyRanges || [];
+    // Save to local as backup
+    saveCfg();
+    renderCalendars();
+    if (document.getElementById('busy-list')) renderBusyList();
   } catch(e) {
-    console.log('Using local availability data');
+    console.log('Cloud unavailable, using local data:', e);
+    // Fallback to localStorage if cloud fails
   }
 }
 loadCloudAvailability();
+
+// Refresh cloud data every 5 minutes
+setInterval(loadCloudAvailability, 5 * 60 * 1000);
 
 
 // Check if coming from successful payment
