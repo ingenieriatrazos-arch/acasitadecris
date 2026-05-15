@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-in Online — A Casiña de Cris</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Nunito',sans-serif;background:#f0f7fa;color:#1a3a4a;min-height:100vh}
+
+nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;background:rgba(240,247,250,0.97);border-bottom:1px solid #b8d9e8;position:sticky;top:0;z-index:100}
+.nav-logo{font-family:'Playfair Display',serif;font-size:1.2rem;color:#0a2d40}
+.nav-logo span{color:#2e8bb5}
+
+.hero{background:linear-gradient(135deg,#0a2d40,#1a6a8f);padding:2.5rem 2rem;text-align:center;color:#fff}
+.hero h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:400;margin-bottom:.4rem}
+.hero h1 em{font-style:italic;color:#7dd3f5}
+.hero p{font-size:.9rem;color:rgba(200,235,255,.8);max-width:500px;margin:0 auto}
+
+.container{max-width:720px;margin:2rem auto;padding:0 1rem}
+
+/* STEPS */
+.steps{display:flex;justify-content:center;gap:0;margin-bottom:2rem}
+.step{display:flex;align-items:center;gap:.5rem;font-size:.78rem;font-weight:600;color:#5a8a9a}
+.step.active{color:#2e8bb5}
+.step.done{color:#1D9E75}
+.step-num{width:28px;height:28px;border-radius:50%;border:2px solid #b8d9e8;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;background:#fff}
+.step.active .step-num{border-color:#2e8bb5;background:#2e8bb5;color:#fff}
+.step.done .step-num{border-color:#1D9E75;background:#1D9E75;color:#fff}
+.step-line{width:40px;height:2px;background:#b8d9e8;margin:0 .3rem}
+.step-line.done{background:#1D9E75}
+
+/* BOOKING INFO */
+.booking-card{background:#fff;border:1.5px solid #b8d9e8;border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.5rem}
+.booking-icon{width:52px;height:52px;background:linear-gradient(135deg,#2e8bb5,#1a6a8f);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0}
+.booking-info h3{font-size:1rem;font-weight:600;color:#0a2d40;margin-bottom:.3rem}
+.booking-info p{font-size:.85rem;color:#5a8a9a}
+.booking-info strong{color:#2e8bb5}
+
+/* SECTIONS */
+.section{background:#fff;border:1.5px solid #d0e8f5;border-radius:16px;padding:1.8rem;margin-bottom:1.5rem}
+.section-header{display:flex;align-items:center;gap:.8rem;margin-bottom:1.4rem;padding-bottom:.8rem;border-bottom:1px solid #e8f4fa}
+.section-header i{font-size:22px;color:#2e8bb5}
+.section-header h2{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:400;color:#0a2d40}
+.section-header .badge{background:#e8f4fa;border:1px solid #b8d9e8;border-radius:20px;padding:.2rem .7rem;font-size:.72rem;color:#2e8bb5;font-weight:600;margin-left:auto}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-grid.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:.3rem}
+.fg label{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#2e8bb5;font-weight:600}
+.fg label span{color:#e05a5a;margin-left:2px}
+.fg input,.fg select,.fg textarea{background:#f0f7fa;border:1.5px solid #c0ddf0;border-radius:8px;padding:.65rem .9rem;font-family:'Nunito',sans-serif;font-size:.88rem;color:#1a3a4a;outline:none;transition:border-color .2s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#2e8bb5;background:#fff}
+.fg textarea{resize:none;height:80px}
+.fg .hint{font-size:.72rem;color:#5a8a9a;margin-top:.2rem}
+
+/* PERSONA CARD */
+.persona-card{border:1.5px solid #d0e8f5;border-radius:12px;padding:1.2rem;margin-bottom:1rem;position:relative}
+.persona-card .persona-title{font-size:.82rem;font-weight:600;color:#2e8bb5;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.persona-card .persona-title i{font-size:16px}
+.btn-remove{position:absolute;top:.8rem;right:.8rem;background:none;border:none;color:#e05a5a;cursor:pointer;font-size:1.1rem;padding:.2rem}
+.btn-add{display:flex;align-items:center;gap:.5rem;background:#e8f4fa;border:1.5px dashed #2e8bb5;color:#2e8bb5;padding:.7rem 1.2rem;border-radius:10px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;width:100%;justify-content:center;margin-top:.5rem}
+.btn-add:hover{background:#d0eaf8}
+
+/* LEGAL */
+.legal-box{background:#fff8e8;border:1.5px solid #f5d88a;border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;display:flex;gap:.8rem;align-items:flex-start}
+.legal-box i{color:#b07010;font-size:20px;flex-shrink:0;margin-top:.1rem}
+.legal-box p{font-size:.82rem;color:#6a5010;line-height:1.6}
+
+/* SUBMIT */
+.btn-submit{width:100%;background:linear-gradient(135deg,#2e8bb5,#1a6a8f);color:#fff;border:none;padding:1rem;border-radius:12px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:opacity .2s;letter-spacing:.04em}
+.btn-submit:hover{opacity:.88}
+.btn-submit:disabled{opacity:.45;cursor:not-allowed}
+
+/* SUCCESS */
+.success-screen{display:none;text-align:center;padding:3rem 1rem}
+.success-screen.visible{display:block}
+.success-icon{width:80px;height:80px;background:linear-gradient(135deg,#1D9E75,#0F6E56);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:36px;color:#fff}
+.success-screen h2{font-family:'Playfair Display',serif;font-size:1.8rem;color:#0a2d40;margin-bottom:.8rem}
+.success-screen p{font-size:.92rem;color:#5a8a9a;max-width:400px;margin:0 auto 1.5rem;line-height:1.7}
+.access-code-box{background:linear-gradient(135deg,#0a2d40,#1a6a8f);color:#fff;border-radius:16px;padding:1.5rem;max-width:360px;margin:0 auto 1.5rem;text-align:center}
+.access-code-box .label{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#7dd3f5;margin-bottom:.5rem}
+.access-code-box .code{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:500;color:#fff;letter-spacing:.15em}
+.access-code-box .hint{font-size:.78rem;color:rgba(200,235,255,.7);margin-top:.4rem}
+
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#0a2d40;color:#fff;padding:.85rem 1.5rem;border-radius:12px;font-size:.84rem;display:none;z-index:9999;border-left:4px solid #2e8bb5;font-weight:500}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">A Casiña <span>de Cris</span></div>
+  <a href="/" style="font-size:.82rem;color:#2e8bb5;text-decoration:none;font-weight:600">← Volver a la web</a>
+</nav>
+
+<div class="hero">
+  <h1>Check-in <em>online</em></h1>
+  <p>Completa tu registro antes de la llegada. Es obligatorio y solo tarda 2 minutos.</p>
+</div>
+
+<div class="container">
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step1-indicator">
+      <div class="step-num">1</div>
+      <span>Tus datos</span>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step" id="step2-indicator">
+      <div class="step-num">2</div>
+      <span>Acompañantes</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step" id="step3-indicator">
+      <div class="step-num">3</div>
+      <span>Confirmar</span>
+    </div>
+  </div>
+
+  <!-- BOOKING INFO -->
+  <div class="booking-card">
+    <div class="booking-icon"><i class="ti ti-home"></i></div>
+    <div class="booking-info">
+      <h3>A Casiña de Cris · Boiro, A Coruña</h3>
+      <p id="booking-dates-display">Cargando datos de la reserva...</p>
+    </div>
+  </div>
+
+  <!-- PASO 1: DATOS TITULAR -->
+  <div id="step1">
+    <div class="section">
+      <div class="section-header">
+        <i class="ti ti-user"></i>
+        <h2>Datos del titular de la reserva</h2>
+        <span class="badge">Obligatorio</span>
+      </div>
+      <div class="form-grid">
+        <div class="fg"><label>Nombre <span>*</span></label><input type="text" id="t-nombre" placeholder="Tu nombre"></div>
+        <div class="fg"><label>Apellidos <span>*</span></label><input type="text" id="t-apellidos" placeholder="Tus apellidos"></div>
+        <div class="fg"><label>DNI / NIE / Pasaporte <span>*</span></label><input type="text" id="t-dni" placeholder="12345678A"></div>
+        <div class="fg"><label>Fecha de nacimiento <span>*</span></label><input type="date" id="t-nacimiento"></div>
+        <div class="fg"><label>Nacionalidad <span>*</span></label>
+          <select id="t-nacionalidad">
+            <option value="">Selecciona...</option>
+            <option value="Española" selected>Española</option>
+            <option value="Francesa">Francesa</option>
+            <option value="Portuguesa">Portuguesa</option>
+            <option value="Alemana">Alemana</option>
+            <option value="Italiana">Italiana</option>
+            <option value="Británica">Británica</option>
+            <option value="Otra">Otra</option>
+          </select>
+        </div>
+        <div class="fg"><label>Teléfono <span>*</span></label><input type="tel" id="t-telefono" placeholder="+34 600 000 000"></div>
+        <div class="fg"><label>Email <span>*</span></label><input type="email" id="t-email" placeholder="tu@email.com"></div>
+        <div class="fg"><label>Dirección <span>*</span></label><input type="text" id="t-direccion" placeholder="Calle, número, ciudad"></div>
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="goToStep2()">
+      <i class="ti ti-arrow-right"></i> Continuar con acompañantes
+    </button>
+  </div>
+
+  <!-- PASO 2: ACOMPAÑANTES -->
+  <div id="step2" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <i class="ti ti-users"></i>
+        <h2>Adultos acompañantes</h2>
+        <span class="badge">Si los hay</span>
+      </div>
+      <p style="font-size:.85rem;color:#5a8a9a;margin-bottom:1.2rem">Añade los datos de cada adulto que se aloje. Los menores no necesitan registro.</p>
+      <div id="acompanantes-list"></div>
+      <button class="btn-add" onclick="addAcompanante()">
+        <i class="ti ti-plus"></i> Añadir adulto acompañante
+      </button>
+    </div>
+
+    <div style="display:flex;gap:1rem">
+      <button class="btn-submit" style="background:#e8f4fa;color:#2e8bb5;flex:0 0 auto;width:auto;padding:.9rem 1.5rem" onclick="goToStep1()">
+        <i class="ti ti-arrow-left"></i>
+      </button>
+      <button class="btn-submit" onclick="goToStep3()" style="flex:1">
+        <i class="ti ti-arrow-right"></i> Revisar y confirmar
+      </button>
+    </div>
+  </div>
+
+  <!-- PASO 3: CONFIRMAR -->
+  <div id="step3" style="display:none">
+    <div class="section">
+      <div class="section-header">
+        <i class="ti ti-clipboard-check"></i>
+        <h2>Resumen del check-in</h2>
+      </div>
+      <div id="resumen-content"></div>
+    </div>
+
+    <div class="legal-box">
+      <i class="ti ti-shield-check"></i>
+      <p>Tus datos serán tratados conforme al RGPD y comunicados a las autoridades competentes (Guardia Civil) según la normativa de hospedaje vigente en España. No serán usados para ningún otro fin.</p>
+    </div>
+
+    <div style="display:flex;gap:1rem">
+      <button class="btn-submit" style="background:#e8f4fa;color:#2e8bb5;flex:0 0 auto;width:auto;padding:.9rem 1.5rem" onclick="goToStep2()">
+        <i class="ti ti-arrow-left"></i>
+      </button>
+      <button class="btn-submit" id="btn-confirmar" onclick="submitCheckin()" style="flex:1">
+        <i class="ti ti-check"></i> Confirmar check-in
+      </button>
+    </div>
+  </div>
+
+  <!-- ÉXITO -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon"><i class="ti ti-check"></i></div>
+    <h2>¡Check-in completado!</h2>
+    <p>Hemos recibido tus datos correctamente. Aquí tienes el código de acceso a la casa:</p>
+    <div class="access-code-box">
+      <div class="label">Código de acceso</div>
+      <div class="code">2 · 6 · 0 · 0</div>
+      <div class="hint">Úsalo en el teclado de la puerta de entrada</div>
+    </div>
+    <p>Te hemos enviado también un email de bienvenida con toda la información de la casa, normas y recomendaciones de la zona.</p>
+    <a href="/" style="display:inline-block;margin-top:1rem;background:linear-gradient(135deg,#2e8bb5,#1a6a8f);color:#fff;padding:.8rem 2rem;border-radius:12px;text-decoration:none;font-weight:600;font-size:.9rem">Volver a la web</a>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var acompanantesCount = 0;
+var bookingData = {};
+
+// Get URL params
+function getParam(name) {
+  var url = new URLSearchParams(window.location.search);
+  return url.get(name) || '';
+}
+
+// Load booking data from URL
+window.onload = function() {
+  var checkin = getParam('checkin');
+  var checkout = getParam('checkout');
+  var noches = getParam('noches');
+  var email = getParam('email');
+  var nombre = getParam('nombre');
+
+  bookingData = { checkin, checkout, noches, email, nombre };
+
+  if (checkin && checkout) {
+    document.getElementById('booking-dates-display').innerHTML =
+      '<strong>' + checkin + '</strong> → <strong>' + checkout + '</strong>' +
+      (noches ? ' · ' + noches + ' noches' : '');
+  } else {
+    document.getElementById('booking-dates-display').textContent = 'A Casiña de Cris · Boiro, A Coruña';
+  }
+
+  if (email) document.getElementById('t-email').value = email;
+  if (nombre) document.getElementById('t-nombre').value = nombre;
+};
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(function(){ t.style.display = 'none'; }, 3000);
+}
+
+function setStep(n) {
+  [1,2,3].forEach(function(i) {
+    document.getElementById('step'+i).style.display = i===n ? 'block' : 'none';
+    var ind = document.getElementById('step'+i+'-indicator');
+    ind.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+  [1,2].forEach(function(i) {
+    document.getElementById('line'+i).className = 'step-line' + (i < n ? ' done' : '');
+  });
+  window.scrollTo(0, 0);
+}
+
+function goToStep1() { setStep(1); }
+
+function goToStep2() {
+  var required = ['t-nombre','t-apellidos','t-dni','t-nacimiento','t-nacionalidad','t-telefono','t-email','t-direccion'];
+  for (var id of required) {
+    if (!document.getElementById(id).value.trim()) {
+      showToast('Por favor rellena todos los campos obligatorios');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+  setStep(2);
+}
+
+function addAcompanante() {
+  acompanantesCount++;
+  var n = acompanantesCount;
+  var div = document.createElement('div');
+  div.className = 'persona-card';
+  div.id = 'acomp-' + n;
+  div.innerHTML = '<div class="persona-title"><i class="ti ti-user"></i>Adulto acompañante ' + n + '</div>' +
+    '<button class="btn-remove" onclick="removeAcompanante(' + n + ')" title="Eliminar"><i class="ti ti-x"></i></button>' +
+    '<div class="form-grid">' +
+    '<div class="fg"><label>Nombre <span>*</span></label><input type="text" id="a'+n+'-nombre" placeholder="Nombre"></div>' +
+    '<div class="fg"><label>Apellidos <span>*</span></label><input type="text" id="a'+n+'-apellidos" placeholder="Apellidos"></div>' +
+    '<div class="fg"><label>DNI / NIE / Pasaporte <span>*</span></label><input type="text" id="a'+n+'-dni" placeholder="12345678A"></div>' +
+    '<div class="fg"><label>Fecha de nacimiento <span>*</span></label><input type="date" id="a'+n+'-nacimiento"></div>' +
+    '<div class="fg"><label>Nacionalidad <span>*</span></label><select id="a'+n+'-nacionalidad"><option value="">Selecciona...</option><option value="Española" selected>Española</option><option value="Francesa">Francesa</option><option value="Portuguesa">Portuguesa</option><option value="Alemana">Alemana</option><option value="Italiana">Italiana</option><option value="Británica">Británica</option><option value="Otra">Otra</option></select></div>' +
+    '<div class="fg"><label>Dirección</label><input type="text" id="a'+n+'-direccion" placeholder="Calle, número, ciudad"></div>' +
+    '</div>';
+  document.getElementById('acompanantes-list').appendChild(div);
+}
+
+function removeAcompanante(n) {
+  var el = document.getElementById('acomp-' + n);
+  if (el) el.remove();
+}
+
+function goToStep3() {
+  // Build summary
+  var html = '<div style="margin-bottom:1.2rem">';
+  html += '<div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#2e8bb5;font-weight:600;margin-bottom:.6rem">Titular</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .5rem">';
+  var fields = [
+    ['Nombre completo', document.getElementById('t-nombre').value + ' ' + document.getElementById('t-apellidos').value],
+    ['DNI/NIE/Pasaporte', document.getElementById('t-dni').value],
+    ['Fecha nacimiento', document.getElementById('t-nacimiento').value],
+    ['Nacionalidad', document.getElementById('t-nacionalidad').value],
+    ['Teléfono', document.getElementById('t-telefono').value],
+    ['Email', document.getElementById('t-email').value],
+    ['Dirección', document.getElementById('t-direccion').value],
+  ];
+  fields.forEach(function(f) {
+    html += '<div style="background:#f0f7fa;border-radius:8px;padding:.6rem .8rem"><div style="font-size:.68rem;color:#5a8a9a;text-transform:uppercase;letter-spacing:.06em">' + f[0] + '</div><div style="font-size:.88rem;color:#0a2d40;font-weight:500;margin-top:.1rem">' + (f[1]||'—') + '</div></div>';
+  });
+  html += '</div></div>';
+
+  // Acompañantes
+  var acomps = document.querySelectorAll('.persona-card');
+  if (acomps.length > 0) {
+    html += '<div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#2e8bb5;font-weight:600;margin-bottom:.6rem;margin-top:1rem">Acompañantes (' + acomps.length + ')</div>';
+    for (var i = 1; i <= acompanantesCount; i++) {
+      if (!document.getElementById('acomp-' + i)) continue;
+      html += '<div style="background:#f0f7fa;border-radius:8px;padding:.8rem;margin-bottom:.5rem">';
+      html += '<div style="font-size:.82rem;font-weight:600;color:#2e8bb5;margin-bottom:.4rem">Adulto ' + i + '</div>';
+      html += '<div style="font-size:.85rem;color:#0a2d40">' +
+        (document.getElementById('a'+i+'-nombre') ? document.getElementById('a'+i+'-nombre').value : '') + ' ' +
+        (document.getElementById('a'+i+'-apellidos') ? document.getElementById('a'+i+'-apellidos').value : '') +
+        ' · DNI: ' + (document.getElementById('a'+i+'-dni') ? document.getElementById('a'+i+'-dni').value : '') +
+        '</div></div>';
+    }
+  }
+
+  document.getElementById('resumen-content').innerHTML = html;
+  setStep(3);
+}
+
+async function submitCheckin() {
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Enviando...';
+
+  // Build message for WhatsApp
+  var titular = {
+    nombre: document.getElementById('t-nombre').value + ' ' + document.getElementById('t-apellidos').value,
+    dni: document.getElementById('t-dni').value,
+    nacimiento: document.getElementById('t-nacimiento').value,
+    nacionalidad: document.getElementById('t-nacionalidad').value,
+    telefono: document.getElementById('t-telefono').value,
+    email: document.getElementById('t-email').value,
+    direccion: document.getElementById('t-direccion').value,
+  };
+
+  var msg = '✅ NUEVO CHECK-IN — A Casiña de Cris\n\n';
+  msg += '📅 Reserva: ' + (bookingData.checkin || '—') + ' → ' + (bookingData.checkout || '—') + '\n\n';
+  msg += '👤 TITULAR\n';
+  msg += 'Nombre: ' + titular.nombre + '\n';
+  msg += 'DNI/Pasaporte: ' + titular.dni + '\n';
+  msg += 'Fecha nac.: ' + titular.nacimiento + '\n';
+  msg += 'Nacionalidad: ' + titular.nacionalidad + '\n';
+  msg += 'Teléfono: ' + titular.telefono + '\n';
+  msg += 'Email: ' + titular.email + '\n';
+  msg += 'Dirección: ' + titular.direccion + '\n';
+
+  // Acompañantes
+  for (var i = 1; i <= acompanantesCount; i++) {
+    if (!document.getElementById('acomp-' + i)) continue;
+    msg += '\n👤 ACOMPAÑANTE ' + i + '\n';
+    msg += 'Nombre: ' + (document.getElementById('a'+i+'-nombre') ? document.getElementById('a'+i+'-nombre').value : '') + ' ' + (document.getElementById('a'+i+'-apellidos') ? document.getElementById('a'+i+'-apellidos').value : '') + '\n';
+    msg += 'DNI: ' + (document.getElementById('a'+i+'-dni') ? document.getElementById('a'+i+'-dni').value : '') + '\n';
+    msg += 'Nac.: ' + (document.getElementById('a'+i+'-nacimiento') ? document.getElementById('a'+i+'-nacimiento').value : '') + '\n';
+    msg += 'Nacionalidad: ' + (document.getElementById('a'+i+'-nacionalidad') ? document.getElementById('a'+i+'-nacionalidad').value : '') + '\n';
+  }
+
+  // Build structured data for email
+  var acompsData = [];
+  for (var j = 1; j <= acompanantesCount; j++) {
+    if (!document.getElementById('acomp-' + j)) continue;
+    acompsData.push({
+      nombre: (document.getElementById('a'+j+'-nombre') ? document.getElementById('a'+j+'-nombre').value : '') + ' ' + (document.getElementById('a'+j+'-apellidos') ? document.getElementById('a'+j+'-apellidos').value : ''),
+      dni: document.getElementById('a'+j+'-dni') ? document.getElementById('a'+j+'-dni').value : '',
+      nacimiento: document.getElementById('a'+j+'-nacimiento') ? document.getElementById('a'+j+'-nacimiento').value : '',
+      nacionalidad: document.getElementById('a'+j+'-nacionalidad') ? document.getElementById('a'+j+'-nacionalidad').value : ''
+    });
+  }
+
+  // Send email via Netlify function
+  try {
+    await fetch('/.netlify/functions/send-checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titular: titular,
+        acompanantes: acompsData,
+        reserva: { checkin: bookingData.checkin || '—', checkout: bookingData.checkout || '—' }
+      })
+    });
+  } catch(e) {
+    console.error('Error enviando email:', e);
+  }
+
+  // Send via WhatsApp
+  var waUrl = 'https://wa.me/34679536015?text=' + encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+
+  // Show success
+  setTimeout(function() {
+    document.querySelector('.container').innerHTML = '';
+    document.getElementById('success-screen').className = 'success-screen visible';
+    document.querySelector('.container').appendChild(document.getElementById('success-screen'));
+  }, 800);
+}
+</script>
+</body>
+</html>
