@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Mirador · A Casiña de Cris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Outfit:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#0a1622;
+    --deep:#0e2233;
+    --sea:#15405a;
+    --foam:#e8eef0;
+    --mist:rgba(232,238,240,.62);
+    --amber:#e9a84b;
+    --amber-soft:rgba(233,168,75,.85);
+    --line:rgba(232,238,240,.16);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:var(--abyss);color:var(--foam);
+    font-family:'Outfit',-apple-system,sans-serif;font-weight:300;
+    user-select:none;-webkit-user-select:none;}
+
+  /* ---------- Cámara de fondo ---------- */
+  #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#0a1622;}
+  #grain{position:fixed;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  #vignette{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(130% 90% at 50% 40%,transparent 50%,rgba(10,22,34,.55) 100%);}
+
+  /* ---------- HUD ---------- */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:5;}
+
+  /* Cinta de brújula superior */
+  #strip-wrap{position:absolute;top:0;left:0;right:0;height:54px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(10,22,34,.78),rgba(10,22,34,0));
+    -webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+            mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);}
+  #strip{position:absolute;top:0;height:54px;display:flex;align-items:flex-end;
+    font-family:'DM Mono',monospace;}
+  .tick{width:14px;text-align:center;color:var(--mist);font-size:10px;
+    position:relative;height:54px;}
+  .tick i{position:absolute;bottom:6px;left:50%;width:1px;height:8px;background:var(--mist);transform:translateX(-50%);}
+  .tick.major i{height:16px;background:var(--foam);}
+  .tick span{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+    letter-spacing:.5px;color:var(--foam);font-weight:500;font-size:11px;}
+  #center-mark{position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:2px;height:54px;background:var(--amber);box-shadow:0 0 12px var(--amber-soft);}
+
+  /* Retícula central */
+  #reticle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:46px;height:46px;opacity:.7;}
+  #reticle::before,#reticle::after{content:"";position:absolute;background:var(--foam);}
+  #reticle::before{top:50%;left:0;right:0;height:1px;transform:translateY(-50%);}
+  #reticle::after{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%);}
+  #reticle b{position:absolute;width:9px;height:9px;border:1.5px solid var(--amber);border-radius:50%;
+    top:50%;left:50%;transform:translate(-50%,-50%);}
+
+  /* Marcadores de islas flotando sobre el mar */
+  .marker{position:absolute;top:46%;transform:translate(-50%,-100%);text-align:center;
+    transition:opacity .35s ease;pointer-events:none;white-space:nowrap;}
+  .marker .pin{width:1px;height:30px;background:linear-gradient(var(--amber),transparent);margin:0 auto;}
+  .marker .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);margin:0 auto 8px;
+    box-shadow:0 0 10px var(--amber-soft);}
+  .marker .name{font-family:'Fraunces',serif;font-weight:500;font-size:15px;letter-spacing:.3px;
+    text-shadow:0 1px 8px rgba(10,22,34,.9);}
+  .marker .far{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--mist);
+    letter-spacing:1px;margin-top:2px;text-shadow:0 1px 6px rgba(10,22,34,.9);}
+  .marker.active .name{color:var(--amber);}
+  .marker.dim{opacity:.4;}
+  .marker.dim .name{font-size:12px;font-weight:400;}
+  .marker.dim .pin{height:18px;}
+
+  /* Tarjeta de ficha inferior */
+  #card{position:absolute;left:14px;right:14px;bottom:14px;pointer-events:auto;
+    background:rgba(14,34,51,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--line);border-radius:20px;padding:18px 20px 20px;
+    transform:translateY(140%);opacity:0;transition:transform .5s cubic-bezier(.22,1,.36,1),opacity .4s;}
+  #card.show{transform:translateY(0);opacity:1;}
+  #card .kicker{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;
+    text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
+  #card h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;line-height:1.05;margin-bottom:3px;}
+  #card .sub{font-size:13px;color:var(--mist);margin-bottom:12px;font-style:italic;
+    font-family:'Fraunces',serif;font-weight:300;}
+  #card p{font-size:14.5px;line-height:1.55;color:var(--foam);font-weight:300;}
+  #card .meta{display:flex;gap:18px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);}
+  #card .meta div{font-size:11px;color:var(--mist);font-family:'DM Mono',monospace;letter-spacing:.5px;}
+  #card .meta b{display:block;color:var(--foam);font-size:15px;font-weight:500;margin-top:2px;
+    font-family:'Outfit';letter-spacing:0;}
+
+  /* Estado / pista cuando no apuntas a nada */
+  #hint{position:absolute;top:50%;left:50%;transform:translate(-50%,30px);text-align:center;
+    font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--mist);
+    text-transform:uppercase;transition:opacity .4s;}
+
+  /* Ajuste de brújula */
+  #cal{position:absolute;top:64px;right:14px;pointer-events:auto;display:flex;align-items:center;gap:8px;
+    background:rgba(14,34,51,.6);backdrop-filter:blur(10px);border:1px solid var(--line);
+    border-radius:30px;padding:5px 6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--mist);}
+  #cal button{width:26px;height:26px;border:none;border-radius:50%;background:rgba(232,238,240,.1);
+    color:var(--foam);font-size:15px;line-height:1;cursor:pointer;}
+  #cal button:active{background:var(--amber);color:var(--abyss);}
+  #cal span{min-width:34px;text-align:center;letter-spacing:.5px;}
+
+  /* ---------- Portada / permisos ---------- */
+  #intro{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:40px 32px;
+    background:radial-gradient(120% 80% at 50% 20%,#15405a 0%,#0e2233 45%,#0a1622 100%);
+    transition:opacity .6s;}
+  #intro .badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:4px;
+    text-transform:uppercase;color:var(--amber);margin-bottom:26px;}
+  #intro h1{font-family:'Fraunces',serif;font-weight:300;font-size:42px;line-height:1.02;
+    margin-bottom:14px;}
+  #intro h1 b{font-weight:600;font-style:italic;display:block;}
+  #intro p{max-width:300px;font-size:15px;line-height:1.6;color:var(--mist);margin-bottom:40px;font-weight:300;}
+  #go{pointer-events:auto;font-family:'Outfit';font-weight:400;font-size:16px;letter-spacing:.5px;
+    color:var(--abyss);background:var(--amber);border:none;border-radius:40px;
+    padding:16px 44px;cursor:pointer;box-shadow:0 8px 30px rgba(233,168,75,.35);
+    transition:transform .15s;}
+  #go:active{transform:scale(.96);}
+  #status{margin-top:22px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;
+    color:var(--mist);min-height:16px;}
+  .wave{position:absolute;bottom:0;left:0;right:0;opacity:.5;}
+  #hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<video id="cam" autoplay playsinline muted></video>
+<div id="vignette"></div>
+<div id="grain"></div>
+
+<div class="hud">
+  <div id="strip-wrap"><div id="strip"></div></div>
+  <div id="center-mark"></div>
+  <div id="reticle"><b></b></div>
+  <div id="hint">Apunta hacia el mar</div>
+  <div id="markers"></div>
+
+  <div id="cal">
+    <button id="cm">−</button><span id="caltxt">0°</span><button id="cp">+</button>
+  </div>
+
+  <div id="card">
+    <div class="kicker" id="c-kicker">Illa</div>
+    <h2 id="c-name">—</h2>
+    <div class="sub" id="c-sub"></div>
+    <p id="c-desc"></p>
+    <div class="meta">
+      <div>RUMBO<b id="c-bear">—</b></div>
+      <div>DISTANCIA<b id="c-dist">—</b></div>
+    </div>
+  </div>
+</div>
+
+<div id="intro">
+  <svg class="wave" viewBox="0 0 400 120" preserveAspectRatio="none" height="110">
+    <path d="M0 60 Q50 30 100 55 T200 50 T300 58 T400 45 V120 H0 Z" fill="#15405a" opacity=".6"/>
+    <path d="M0 80 Q50 55 100 75 T200 70 T300 80 T400 65 V120 H0 Z" fill="#0e2233"/>
+  </svg>
+  <div class="badge">A Casiña de Cris · Boiro</div>
+  <h1>Mirador<b>da Ría</b></h1>
+  <p>Apunta con la cámara hacia el mar y descubre qué isla tienes delante.</p>
+  <button id="go">Comenzar</button>
+  <div id="status"></div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   1) DATOS — EDITA AQUÍ.  Coordenadas: clic derecho en Google
+   Maps sobre la isla → "¿Qué hay aquí?" → copia lat, lng.
+   (Las de abajo son APROXIMADAS, solo para que el demo funcione)
+   ════════════════════════════════════════════════════════════ */
+
+// Tu balcón. Por defecto usa el GPS del móvil; si prefieres fijarlo,
+// pon useGPS=false y rellena estas coordenadas exactas del balcón.
+const BALCON = { lat: 42.6469, lng: -8.8856 };
+const useGPS = true;
+
+const ISLAS = [
+  {
+    nombre: "A Illa de Arousa",
+    lat: 42.5586, lng: -8.8689,
+    sub: "La isla habitada de la ría",
+    texto: "Unida a tierra por un puente de casi 2 km. Tiene el Parque Natural de Carreirón, calas de arena blanca y una fuerte tradición marisquera y conservera."
+  },
+  {
+    nombre: "Illa de Cortegada",
+    lat: 42.6233, lng: -8.7836,
+    sub: "El bosque de laurel del Atlántico",
+    texto: "Parte del Parque Nacional das Illas Atlánticas. Alberga el mayor bosque de laureles de Europa. Fue regalada a la familia real en 1907."
+  },
+  {
+    nombre: "Illa de Sálvora",
+    lat: 42.4708, lng: -9.0086,
+    sub: "La guardiana de la bocana",
+    texto: "Marca la entrada de la ría. Su faro y la estatua de la sirena presiden un paisaje de granito, dunas y leyendas marineras."
+  },
+  {
+    nombre: "Illa Rúa",
+    lat: 42.5527, lng: -8.9210,
+    sub: "El pequeño faro blanco",
+    texto: "Islote con un faro característico que orienta a los barcos dentro de la ría. Rodeado de bateas de mejillón."
+  }
+];
+
+/* ════════════════════════════════════════════════════════════
+   2) AJUSTES de sensibilidad
+   ════════════════════════════════════════════════════════════ */
+const FOV = 62;        // campo de visión horizontal de la cámara (grados)
+const TOLERANCIA = 9;  // a cuántos grados se considera que "apuntas" a la isla
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+
+/* ─────────────── Estado ─────────────── */
+let observador = { ...BALCON };
+let rumbo = 0;          // hacia dónde apunta el móvil (0=N)
+let ajuste = 0;         // corrección manual de brújula
+let listas = [];        // islas con su rumbo y distancia ya calculados
+
+/* ─────────────── Matemática geográfica ─────────────── */
+function rumboHacia(o, t){
+  const dLng=(t.lng-o.lng)*D2R, lat1=o.lat*D2R, lat2=t.lat*D2R;
+  const y=Math.sin(dLng)*Math.cos(lat2);
+  const x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng);
+  return (Math.atan2(y,x)*R2D+360)%360;
+}
+function distancia(o,t){
+  const R=6371,dLat=(t.lat-o.lat)*D2R,dLng=(t.lng-o.lng)*D2R,lat1=o.lat*D2R,lat2=t.lat*D2R;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function difAngular(objetivo,actual){
+  let d=objetivo-actual;
+  while(d>180)d-=360; while(d<-180)d+=360;
+  return d; // + a la derecha, − a la izquierda
+}
+function recalcular(){
+  listas = ISLAS.map(i=>({
+    ...i,
+    rumbo: rumboHacia(observador,i),
+    dist: distancia(observador,i)
+  }));
+}
+
+/* ─────────────── Cinta de brújula ─────────────── */
+const strip=document.getElementById('strip');
+const dirs={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SO',270:'O',315:'NO'};
+(function buildStrip(){
+  let html='';
+  for(let g=-180;g<540;g+=2){
+    const real=((g%360)+360)%360;
+    const major=real%30===0;
+    let label=major?(dirs[real]||real+'°'):'';
+    html+=`<div class="tick ${major?'major':''}" data-g="${g}"><i></i>${label?`<span>${label}</span>`:''}</div>`;
+  }
+  strip.innerHTML=html;
+})();
+const TICK=14, STRIP_BASE=180/2*TICK; // px desde el inicio hasta 0°
+
+/* ─────────────── Render por fotograma ─────────────── */
+const markersEl=document.getElementById('markers');
+const card=document.getElementById('card');
+const hint=document.getElementById('hint');
+const W=()=>window.innerWidth;
+
+function render(){
+  // mover cinta: centramos el grado = rumbo
+  const px = (rumbo/2)*TICK; // cada tick = 2°
+  strip.style.left = (W()/2 - STRIP_BASE - px) + 'px';
+
+  // marcadores
+  let activa=null, minDif=999;
+  markersEl.innerHTML='';
+  for(const isla of listas){
+    const d=difAngular(isla.rumbo,rumbo);
+    if(Math.abs(d)>FOV/1.6) continue;       // fuera de pantalla
+    const x = W()/2 + (d/(FOV/2))*(W()/2);
+    const cerca=Math.abs(d)<=TOLERANCIA;
+    if(Math.abs(d)<minDif){minDif=Math.abs(d);activa=cerca?isla:activa;}
+    const m=document.createElement('div');
+    m.className='marker '+(cerca?'active':'dim');
+    m.style.left=x+'px';
+    m.innerHTML=`<div class="dot"></div><div class="name">${isla.nombre}</div>`+
+                `<div class="far">${isla.dist.toFixed(1)} KM</div><div class="pin"></div>`;
+    markersEl.appendChild(m);
+  }
+
+  if(activa){
+    hint.style.opacity=0;
+    mostrarFicha(activa);
+  }else{
+    hint.style.opacity=.8;
+    card.classList.remove('show');
+  }
+}
+
+let fichaActual=null;
+function mostrarFicha(i){
+  if(fichaActual===i.nombre){card.classList.add('show');return;}
+  fichaActual=i.nombre;
+  document.getElementById('c-name').textContent=i.nombre;
+  document.getElementById('c-sub').textContent=i.sub||'';
+  document.getElementById('c-desc').textContent=i.texto||'';
+  document.getElementById('c-bear').textContent=Math.round(i.rumbo)+'°';
+  document.getElementById('c-dist').textContent=i.dist.toFixed(1)+' km';
+  card.classList.add('show');
+}
+
+/* ─────────────── Sensores ─────────────── */
+function onOrient(e){
+  let h=null;
+  if(typeof e.webkitCompassHeading==='number' && !isNaN(e.webkitCompassHeading)){
+    h=e.webkitCompassHeading;                 // iOS: norte verdadero
+  }else if(typeof e.alpha==='number' && e.alpha!==null){
+    h=360-e.alpha;                            // Android
+  }
+  if(h===null)return;
+  rumbo=(h+ajuste+360)%360;
+  render();
+}
+
+function arrancarSensores(){
+  // Brújula / giroscopio
+  if(typeof DeviceOrientationEvent!=='undefined' &&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(r=>{
+      if(r==='granted') window.addEventListener('deviceorientation',onOrient,true);
+      else setStatus('Sin acceso a la brújula');
+    }).catch(()=>setStatus('Sin acceso a la brújula'));
+  }else{
+    window.addEventListener('deviceorientationabsolute',onOrient,true);
+    window.addEventListener('deviceorientation',onOrient,true);
+  }
+  // GPS
+  if(useGPS && navigator.geolocation){
+    navigator.geolocation.watchPosition(p=>{
+      observador={lat:p.coords.latitude,lng:p.coords.longitude};
+      recalcular();
+    },()=>{recalcular();},{enableHighAccuracy:true});
+  }else{
+    recalcular();
+  }
+}
+
+/* ─────────────── Cámara ─────────────── */
+function esNavegadorInApp(){
+  const u=navigator.userAgent||'';
+  return /FBAN|FBAV|Instagram|Line|MicroMessenger|Twitter|WhatsApp/i.test(u);
+}
+
+async function arrancarCamara(){
+  // 1) ¿Contexto seguro (https)?
+  if(!window.isSecureContext){
+    setStatus('Necesita HTTPS. Abre https://…');
+    return false;
+  }
+  // 2) ¿Existe la API? (suele faltar en navegadores internos de apps)
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    setStatus(esNavegadorInApp()
+      ? 'Ábrelo en Safari o Chrome, no dentro de otra app'
+      : 'Este navegador no permite cámara');
+    return false;
+  }
+  const video=document.getElementById('cam');
+  try{
+    let stream;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{ideal:'environment'}},audio:false});
+    }catch(e){
+      // si la trasera falla, probamos con cualquier cámara
+      stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    }
+    video.srcObject=stream;
+    await video.play().catch(()=>{});
+    return true;
+  }catch(err){
+    // Mostramos el motivo REAL para poder diagnosticar
+    let msg=err.name+': '+(err.message||'');
+    if(err.name==='NotAllowedError') msg='Permiso denegado. Revisa ajustes del sitio';
+    else if(err.name==='NotFoundError') msg='No se encontró cámara';
+    else if(err.name==='NotReadableError') msg='La cámara está en uso por otra app';
+    else if(err.name==='SecurityError') msg='Bloqueado por seguridad (¿http?)';
+    setStatus(msg);
+    return false;
+  }
+}
+
+/* ─────────────── Ajuste manual ─────────────── */
+const caltxt=document.getElementById('caltxt');
+function setAjuste(v){ajuste=v;caltxt.textContent=(v>0?'+':'')+v+'°';render();}
+document.getElementById('cp').onclick=()=>setAjuste(ajuste+2);
+document.getElementById('cm').onclick=()=>setAjuste(ajuste-2);
+
+/* ─────────────── Arranque ─────────────── */
+const statusEl=document.getElementById('status');
+function setStatus(t){statusEl.textContent=t;}
+
+document.getElementById('go').addEventListener('click',async ()=>{
+  setStatus('Activando cámara…');
+  const ok=await arrancarCamara();
+  if(!ok)return;
+  setStatus('Activando brújula…');
+  arrancarSensores();
+  recalcular();
+  const intro=document.getElementById('intro');
+  intro.style.opacity='0';
+  setTimeout(()=>intro.id='hidden',650);
+});
+
+window.addEventListener('resize',render);
+window.addEventListener('orientationchange',()=>setTimeout(render,300));
+</script>
+</body>
+</html>
