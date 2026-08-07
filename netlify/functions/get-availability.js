@@ -7,15 +7,10 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    const store = getStore({
-      name: 'reservas',
-      siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
-      token: process.env.NETLIFY_TOKEN,
-      consistency: 'strong'
-    });
-    
+    const store = getStore({ name: 'reservas', consistency: 'strong' });
+
     const data = await store.get('ocupados', { type: 'json' });
-    
+
     return {
       statusCode: 200,
       headers,
@@ -26,7 +21,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ busyRanges: [], error: error.message })
+      body: JSON.stringify({ busyRanges: [], config: {}, error: error.message })
     };
   }
 };
