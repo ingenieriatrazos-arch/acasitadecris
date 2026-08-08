@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const { reservasStore, expandDays } = require('./ical-lib');
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -22,16 +22,24 @@ exports.handler = async function(event, context) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'No autorizado' }) };
     }
 
-    const store = getStore({
-      name: 'reservas',
-      siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
-      token: process.env.NETLIFY_TOKEN,
-      consistency: 'strong'
-    });
-
+    const store = reservasStore();
     const existing = await store.get('ocupados', { type: 'json' }) || {};
+
+    let manualRanges = existing.busyRanges || [];
+    if (busyRanges !== undefined) {
+      const ext = await store.get('externos', { type: 'json' }) || {};
+      const externalDays = expandDays((ext.booking || []).concat(ext.airbnb || []));
+      const previousManualDays = expandDays(existing.busyRanges || []);
+      const postedDays = expandDays(busyRanges || []);
+
+      const days = [...postedDays].filter(function(d){
+        return !externalDays.has(d) || previousManualDays.has(d);
+      }).sort();
+      manualRanges = days.map(function(d){ return { from: d, to: d }; });
+    }
+
     const dataToSave = {
-      busyRanges: busyRanges !== undefined ? busyRanges : (existing.busyRanges || []),
+      busyRanges: manualRanges,
       config: config !== undefined ? config : (existing.config || {})
     };
     await store.setJSON('ocupados', dataToSave);
@@ -39,7 +47,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ ok: true })
+      body: JSON.stringify({ ok: true, saved: manualRanges.length })
     };
   } catch (error) {
     console.error('Error saving blobs:', error);
