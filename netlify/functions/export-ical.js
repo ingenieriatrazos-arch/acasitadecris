@@ -34,7 +34,9 @@ exports.handler = async function(event, context) {
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//A Casina de Cris//Disponibilidad//ES',
-      'CALSCALE:GREGORIAN'
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:A Casina de Cris'
     ];
     blocks.forEach(function(b){
       lines.push('BEGIN:VEVENT');
@@ -43,6 +45,8 @@ exports.handler = async function(event, context) {
       lines.push('DTSTART;VALUE=DATE:' + toCompact(b.from));
       lines.push('DTEND;VALUE=DATE:' + toCompact(addDaysISO(b.to, 1)));
       lines.push('SUMMARY:Ocupado');
+      lines.push('STATUS:CONFIRMED');
+      lines.push('TRANSP:OPAQUE');
       lines.push('END:VEVENT');
     });
     lines.push('END:VCALENDAR');
@@ -51,9 +55,11 @@ exports.handler = async function(event, context) {
       statusCode: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'inline; filename="acasitadecris.ics"',
+        'Cache-Control': 'no-cache',
         'Access-Control-Allow-Origin': '*'
       },
-      body: lines.join('\r\n')
+      body: lines.join('\r\n') + '\r\n'
     };
   } catch (error) {
     return { statusCode: 500, body: 'Error: ' + error.message };
