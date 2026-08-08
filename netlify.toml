@@ -3,3 +3,18 @@
 
 [functions]
   node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/booking.ics"
+  to = "/.netlify/functions/export-ical?src=booking"
+  status = 200
+
+[[redirects]]
+  from = "/airbnb.ics"
+  to = "/.netlify/functions/export-ical?src=airbnb"
+  status = 200
+
+[[redirects]]
+  from = "/calendario.ics"
+  to = "/.netlify/functions/export-ical"
+  status = 200
