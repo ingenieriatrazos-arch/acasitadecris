@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const { reservasStore, ensureFreshExternal } = require('./ical-lib');
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -7,19 +7,33 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    const store = getStore({
-      name: 'reservas',
-      siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
-      token: process.env.NETLIFY_TOKEN,
-      consistency: 'strong'
-    });
+    const store = reservasStore();
+    const data = await store.get('ocupados', { type: 'json' }) || { busyRanges: [], config: {} };
 
-    const data = await store.get('ocupados', { type: 'json' });
+    let external = { booking: [], airbnb: [], updatedAt: null };
+    try {
+      external = await ensureFreshExternal(store, 30);
+    } catch (e) {
+      console.error('Error syncing external icals:', e);
+    }
+
+    const merged = (data.busyRanges || [])
+      .concat(external.booking || [])
+      .concat(external.airbnb || []);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(data || { busyRanges: [], config: {} })
+      body: JSON.stringify({
+        busyRanges: merged,
+        config: data.config || {},
+        manualRanges: data.busyRanges || [],
+        external: {
+          booking: external.booking || [],
+          airbnb: external.airbnb || [],
+          updatedAt: external.updatedAt || null
+        }
+      })
     };
   } catch (error) {
     console.error('Error reading blobs:', error);
