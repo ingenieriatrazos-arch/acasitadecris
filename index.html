@@ -1056,20 +1056,20 @@ function sendForm(){
 </body>
 </html>
 <script>
-/* Notas de bloqueo (motivos) - anadido por asistente */
+/* Bloqueos con motivo v2 */
 (function(){
   var NPWD='04062005';
-  var notesData=[]; var extBooking=[]; var extAirbnb=[];
+  var notesData=[], extBooking=[], extAirbnb=[];
   function inR(ds,r){ return ds>=r.from && ds<=r.to; }
   function extInfo(ds){
     for(var i=0;i<extBooking.length;i++){ if(inR(ds,extBooking[i])) return {src:'Booking',r:extBooking[i]}; }
     for(var j=0;j<extAirbnb.length;j++){ if(inR(ds,extAirbnb[j])) return {src:'Airbnb',r:extAirbnb[j]}; }
     return null;
   }
-  function notesFor(ds){ return notesData.filter(function(n){ return inR(ds,n); }); }
-  function saveNotes(){
-    fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:NPWD,notes:notesData})})
-      .then(function(){ try{showToast('Nota guardada');}catch(e){} });
+  function saveNotesDelayed(){
+    setTimeout(function(){
+      fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:NPWD,notes:notesData})});
+    },2000);
   }
   function nfetch(){
     fetch('/.netlify/functions/get-availability').then(function(r){return r.json();}).then(function(d){
@@ -1078,26 +1078,32 @@ function sendForm(){
       try{renderBusyList();}catch(e){}
     });
   }
-  function addNoteInput(){
-    var fromEl=document.getElementById('a-busy-from');
-    if(!fromEl || document.getElementById('a-busy-note')) return;
-    var row=fromEl.closest('.admin-row');
-    if(!row) return;
+  function buildUI(){
+    var ul=document.getElementById('busy-list');
+    if(!ul||document.getElementById('a-busy-from')) return;
+    var sec=ul.closest('.admin-sec')||ul.parentElement;
     var div=document.createElement('div');
-    div.className='afg';
-    div.style.marginBottom='.8rem';
-    div.innerHTML='<label>Motivo del bloqueo (opcional)</label><input id="a-busy-note" type="text" placeholder="Ej: reserva telefonica de Maria, mantenimiento...">';
-    row.parentElement.insertBefore(div,row.nextSibling);
+    div.className='admin-sec';
+    div.innerHTML='<h3>Bloquear / liberar periodo</h3>'
+      +'<div class="admin-row">'
+      +'<div class="afg"><label>Desde</label><input id="a-busy-from" type="date"></div>'
+      +'<div class="afg"><label>Hasta</label><input id="a-busy-to" type="date"></div>'
+      +'</div>'
+      +'<div class="afg" style="margin-bottom:.8rem"><label>Motivo del bloqueo (opcional)</label><input id="a-busy-note" type="text" placeholder="Ej: reserva telefonica de Maria, mantenimiento..."></div>'
+      +'<div class="admin-btns">'
+      +'<button class="abtn abtn-danger" type="button" onclick="addBusy()">&#128308; Bloquear periodo</button>'
+      +'<button class="abtn abtn-success" type="button" onclick="addFree()">&#128994; Liberar periodo</button>'
+      +'</div>';
+    sec.parentNode.insertBefore(div,sec);
   }
   var _addBusy=window.addBusy;
   window.addBusy=function(){
     var from=document.getElementById('a-busy-from').value, to=document.getElementById('a-busy-to').value;
-    var nEl=document.getElementById('a-busy-note');
-    var motivo=nEl?nEl.value.trim():'';
+    var nEl=document.getElementById('a-busy-note'); var motivo=nEl?nEl.value.trim():'';
     _addBusy();
     if(from&&to&&motivo){
       notesData.push({from:from,to:to,note:motivo});
-      saveNotes();
+      saveNotesDelayed();
       if(nEl) nEl.value='';
       try{renderBusyList();}catch(e){}
     }
@@ -1107,9 +1113,9 @@ function sendForm(){
     var from=document.getElementById('a-busy-from').value, to=document.getElementById('a-busy-to').value;
     _addFree();
     if(from&&to){
-      var before=notesData.length;
-      notesData=notesData.filter(function(n){ return !(n.from>=from && n.to<=to); });
-      if(notesData.length!==before) saveNotes();
+      var b=notesData.length;
+      notesData=notesData.filter(function(n){ return !(n.from>=from&&n.to<=to); });
+      if(b!==notesData.length) saveNotesDelayed();
       try{renderBusyList();}catch(e){}
     }
   };
@@ -1120,38 +1126,32 @@ function sendForm(){
       alert('Dia '+ds+': reserva de '+ext.src+' ('+ext.r.from+' a '+ext.r.to+').\nSe gestiona desde '+ext.src+', aqui no se puede desbloquear.');
       return;
     }
-    var busy=false, rng=null;
-    for(var i=0;i<calCfg.busyRanges.length;i++){
-      var r=calCfg.busyRanges[i];
-      if(inR(ds,r)){ busy=true; rng=r; break; }
-    }
-    if(busy){
-      var ns=notesFor(ds);
+    var rng=null;
+    for(var i=0;i<calCfg.busyRanges.length;i++){ if(inR(ds,calCfg.busyRanges[i])){ rng=calCfg.busyRanges[i]; break; } }
+    if(rng){
+      var ns=notesData.filter(function(n){ return inR(ds,n); });
       var msg='Dia '+ds+' bloqueado ('+rng.from+' a '+rng.to+')';
-      if(ns.length){ msg+='\n\nMotivo: '+ns.map(function(n){return n.note+' ('+n.from+' a '+n.to+')';}).join('\nMotivo: '); }
-      else { msg+='\n\n(Sin motivo apuntado)'; }
+      msg+=ns.length?'\n\nMotivo: '+ns.map(function(n){return n.note+' ('+n.from+' a '+n.to+')';}).join('\nMotivo: '):'\n\n(Sin motivo apuntado)';
       if(!confirm(msg+'\n\nQuieres DESBLOQUEAR este dia?')) return;
     }
     _aToggle(ds);
   };
-  var _renderBusyList=window.renderBusyList;
+  var _rbl=window.renderBusyList;
   window.renderBusyList=function(){
-    _renderBusyList();
+    _rbl();
     var ul=document.getElementById('busy-list');
-    if(!ul || !calCfg.busyRanges.length) return;
+    if(!ul||!calCfg.busyRanges.length) return;
     var lis=ul.querySelectorAll('li');
     calCfg.busyRanges.forEach(function(r,i){
       var li=lis[i]; if(!li) return;
       var span=li.querySelector('span'); if(!span) return;
       var ext=extInfo(r.from);
       if(ext){ span.innerHTML+=' <em style="color:#1a6a8f;font-style:normal;font-size:.72rem">['+ext.src+']</em>'; }
-      var ns=notesData.filter(function(n){ return !(n.to<r.from || n.from>r.to); });
-      ns.forEach(function(n){
+      notesData.filter(function(n){ return !(n.to<r.from||n.from>r.to); }).forEach(function(n){
         span.innerHTML+=' <em style="color:#b07010;font-style:normal;font-size:.72rem">&#128221; '+String(n.note).replace(/</g,'&lt;')+'</em>';
       });
     });
   };
-  addNoteInput();
-  nfetch();
+  buildUI(); nfetch();
 })();
 </script>
