@@ -10,7 +10,13 @@ function addDaysISO(iso, n){
 
 exports.handler = async function(event, context) {
   try {
-    const src = (event.queryStringParameters && event.queryStringParameters.src) || '';
+    let src = (event.queryStringParameters && event.queryStringParameters.src) || '';
+    const raw = (event.rawUrl || '') + ' ' + (event.path || '') + ' ' + ((event.headers && (event.headers['x-nf-original-pathname'] || '')) || '');
+    if (!src) {
+      if (raw.indexOf('booking.ics') >= 0) src = 'booking';
+      else if (raw.indexOf('airbnb.ics') >= 0) src = 'airbnb';
+    }
+
     const store = reservasStore();
     const data = await store.get('ocupados', { type: 'json' }) || {};
 
@@ -57,7 +63,8 @@ exports.handler = async function(event, context) {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': 'inline; filename="acasitadecris.ics"',
         'Cache-Control': 'no-cache',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'X-Ical-Source-Excluded': src || 'none'
       },
       body: lines.join('\r\n') + '\r\n'
     };
