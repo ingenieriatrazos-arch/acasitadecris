@@ -41,7 +41,9 @@ main{padding:1rem;max-width:520px;margin:0 auto}
 .btn.red{background:#e05a5a}
 .btn.green{background:#4caf82}
 .btn.amber{background:#b07010}
+.btn.wa{background:#25D366}
 .btn.blue{background:#2e8bb5;width:100%}
+.tpl{background:none;border:none;color:#2e8bb5;font-size:.72rem;text-decoration:underline;margin-top:.5rem;padding:0}
 ul{list-style:none}
 li{display:flex;justify-content:space-between;align-items:center;background:#f0f7fa;border-radius:8px;padding:.55rem .7rem;margin-bottom:5px;font-size:.8rem;gap:.5rem;flex-wrap:wrap}
 li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem}
@@ -59,7 +61,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 .toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#0a2d40;color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.8rem;display:none;z-index:99}
 #sheetbg{display:none;position:fixed;inset:0;background:rgba(5,20,35,.55);z-index:50}
 #sheetbg.open{display:flex;align-items:flex-end}
-#sheet{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:520px;margin:0 auto;padding:1.2rem 1.2rem 1.6rem}
+#sheet{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:520px;margin:0 auto;padding:1.2rem 1.2rem 1.6rem;max-height:80vh;overflow-y:auto}
 #sheet h3{font-size:1rem;color:#0a2d40;margin-bottom:.3rem}
 #sheet p{font-size:.85rem;color:#3a5a6a;margin-bottom:.4rem}
 #sheet .btns{margin-top:.9rem}
@@ -102,6 +104,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
       <button class="btn amber" onclick="noteOnly()">Solo nota</button>
     </div>
     <p style="font-size:.68rem;color:#5a8a9a;margin-top:.5rem">"Solo nota" sirve para apuntar nombre y telefono sobre una reserva de Booking/Airbnb sin tocar el calendario.</p>
+    <button class="tpl" onclick="editTpl()">&#9998; Editar plantilla de WhatsApp</button>
   </div>
   <div class="card">
     <h2>Proximas ocupaciones</h2>
@@ -116,6 +119,12 @@ var pwd=null, manualDays=[], extB=[], extA=[], notes=[];
 var now=new Date(); now.setHours(0,0,0,0);
 var vy=now.getFullYear(), vm=now.getMonth();
 var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var TPL_DEF='Hola {nombre}, soy Cris de A Casina de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 11:00. Cualquier duda, escribeme por aqui. Gracias!';
+function getTpl(){try{return localStorage.getItem('watpl')||TPL_DEF;}catch(e){return TPL_DEF;}}
+function editTpl(){
+  var t=prompt('Plantilla del WhatsApp. Puedes usar {nombre}, {desde} y {hasta}:',getTpl());
+  if(t!==null){try{localStorage.setItem('watpl',t);}catch(e){} toast('Plantilla guardada');}
+}
 function pad(n){return (n<10?'0':'')+n;}
 function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function addD(ds,n){var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return dstr(d);}
@@ -175,7 +184,24 @@ function render(){
 }
 function esc(s){return String(s).replace(/</g,'&lt;');}
 function fmt(ds){var p=ds.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
-function phoneLink(p){var c=String(p).replace(/[^0-9+]/g,'');return '<a href="tel:'+c+'">'+esc(p)+'</a>';}
+function cleanPhone(p){
+  var c=String(p).replace(/[^0-9+]/g,'');
+  if(c.charAt(0)==='+')c=c.slice(1);
+  if(c.length===9)c='34'+c;
+  return c;
+}
+function waMsg(n){
+  var nombre=(n.note||'').split(',')[0].trim()||'';
+  return getTpl().split('{nombre}').join(nombre).split('{desde}').join(fmt(n.from)).split('{hasta}').join(fmt(n.to));
+}
+function waSend(i){
+  var n=notes[i]; if(!n||!n.phone)return;
+  var msg=waMsg(n);
+  if(!confirm('Enviar WhatsApp a '+(n.note||n.phone)+'?\n\n"'+msg+'"\n\nSe abrira WhatsApp con el mensaje listo; solo tendras que pulsar enviar.'))return;
+  closeSheet();
+  window.open('https://wa.me/'+cleanPhone(n.phone)+'?text='+encodeURIComponent(msg),'_blank');
+}
+function callPhone(i){var n=notes[i];if(n&&n.phone)location.href='tel:+'+cleanPhone(n.phone);}
 function notesOver(r){return notes.filter(function(n){return !(n.to<r.from||n.from>r.to);});}
 function renderList(){
   var today=dstr(now);
@@ -188,7 +214,10 @@ function renderList(){
   items.forEach(function(it){
     var ns=notesOver(it.r);
     h+='<li><span>'+fmt(it.r.from)+' &rarr; '+fmt(it.r.to)
-      +ns.map(function(n){return ' <span class="note">&#128221; '+esc(n.note||'')+(n.phone?' &middot; '+phoneLink(n.phone):'')+'</span>';}).join('')
+      +ns.map(function(n){var i=notes.indexOf(n);
+        return ' <span class="note">&#128221; '+esc(n.note||'')
+        +(n.phone?' &middot; <a href="tel:+'+cleanPhone(n.phone)+'">'+esc(n.phone)+'</a> <a href="#" onclick="waSend('+i+');return false" style="color:#1ebe5a">WhatsApp</a>':'')
+        +'</span>';}).join('')
       +'</span><span class="tag '+it.cls+'">'+it.src+'</span>'
       +(it.del?'<button class="x" onclick="delRange(&quot;'+it.r.from+'&quot;,&quot;'+it.r.to+'&quot;)">&#10005;</button>':'')
       +'</li>';
@@ -213,8 +242,9 @@ function tap(ds){
   });
   h+='<div class="btns">';
   ns.forEach(function(n){
-    if(n.phone){var c=String(n.phone).replace(/[^0-9+]/g,'');
-      h+='<button class="btn green" onclick="location.href=&quot;tel:'+c+'&quot;">&#128222; Llamar'+(ns.length>1?' '+esc(n.phone):'')+'</button>';}
+    if(n.phone){var i=notes.indexOf(n);
+      h+='<button class="btn green" onclick="callPhone('+i+')">&#128222; Llamar</button>';
+      h+='<button class="btn wa" onclick="waSend('+i+')">WhatsApp</button>';}
   });
   if(man)h+='<button class="btn red" onclick="unblockDay(&quot;'+ds+'&quot;)">Desbloquear dia</button>';
   if(!ex&&!man)h+='<button class="btn red" onclick="blockDay(&quot;'+ds+'&quot;)">Bloquear dia</button>';
