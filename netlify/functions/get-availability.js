@@ -10,9 +10,10 @@ exports.handler = async function(event, context) {
     const store = reservasStore();
     const data = await store.get('ocupados', { type: 'json' }) || { busyRanges: [], config: {} };
 
+    const force = event.queryStringParameters && event.queryStringParameters.force === '1';
     let external = { booking: [], airbnb: [], updatedAt: null };
     try {
-      external = await ensureFreshExternal(store, 30);
+      external = await ensureFreshExternal(store, force ? 0 : 30);
     } catch (e) {
       console.error('Error syncing external icals:', e);
     }
@@ -32,7 +33,12 @@ exports.handler = async function(event, context) {
         external: {
           booking: external.booking || [],
           airbnb: external.airbnb || [],
-          updatedAt: external.updatedAt || null
+          updatedAt: external.updatedAt || null,
+          errors: external.errors || {},
+          sources: {
+            booking: !!process.env.BOOKING_ICAL_URL,
+            airbnb: !!process.env.AIRBNB_ICAL_URL
+          }
         }
       })
     };
