@@ -59,7 +59,7 @@ async function fetchIcal(url){
 }
 
 async function ensureFreshExternal(store, maxAgeMinutes){
-  const max = maxAgeMinutes || 30;
+  const max = (maxAgeMinutes === undefined || maxAgeMinutes === null) ? 30 : maxAgeMinutes;
   const ext = await store.get('externos', { type: 'json' }) || {};
   const age = ext.updatedAt ? (Date.now() - new Date(ext.updatedAt).getTime()) / 60000 : Infinity;
   const sources = {
