@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Casina Admin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="theme-color" content="#1a6a8f">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#f0f7fa;color:#1a3a4a;padding-bottom:2rem}
+header{background:linear-gradient(135deg,#0a2d40,#1a6a8f);color:#fff;padding:1rem 1.2rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header h1{font-size:1.05rem;font-weight:600}
+.logout{background:rgba(255,255,255,.15);border:none;color:#fff;padding:.4rem .8rem;border-radius:8px;font-size:.75rem}
+main{padding:1rem;max-width:520px;margin:0 auto}
+.card{background:#fff;border:1.5px solid #d0e8f5;border-radius:14px;padding:1rem;margin-bottom:1rem}
+.card h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:#2e8bb5;margin-bottom:.8rem;border-bottom:1px solid #e0eef5;padding-bottom:.4rem}
+.calnav{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem}
+.calnav b{font-size:.95rem;text-transform:capitalize}
+.calnav button{background:#2e8bb5;color:#fff;border:none;width:34px;height:34px;border-radius:50%;font-size:1.1rem}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dn{text-align:center;font-size:.6rem;color:#5a8a9a;font-weight:600;padding:.2rem 0}
+.d{text-align:center;padding:.55rem .1rem;border-radius:7px;font-size:.85rem;border:1.5px solid transparent;font-weight:500}
+.d.empty{visibility:hidden}
+.d.past{color:#c0d0d8;background:#f6f6f6}
+.d.free{background:#e8f8f0;color:#2a7a52;border-color:#4caf82}
+.d.man{background:#fde8e8;color:#c04040;border-color:#e05a5a}
+.d.bkg{background:#d6e4ff;color:#003580;border-color:#003580}
+.d.abn{background:#ffe0e2;color:#c0353a;border-color:#FF5A5F}
+.d.today{box-shadow:0 0 0 2px #1a6a8f}
+.leg{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.6rem;font-size:.65rem;color:#3a6a7a}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:-1px}
+.fg{margin-bottom:.7rem}
+.fg label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#5a8a9a;font-weight:600;margin-bottom:.25rem}
+.fg input{width:100%;background:#f0f7fa;border:1.5px solid #c0ddf0;border-radius:8px;padding:.65rem .8rem;font-size:1rem;color:#1a3a4a;outline:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.btns{display:flex;gap:.7rem}
+.btn{flex:1;border:none;padding:.75rem;border-radius:10px;font-size:.85rem;font-weight:700;color:#fff}
+.btn.red{background:#e05a5a}
+.btn.green{background:#4caf82}
+.btn.blue{background:#2e8bb5;width:100%}
+ul{list-style:none}
+li{display:flex;justify-content:space-between;align-items:center;background:#f0f7fa;border-radius:8px;padding:.55rem .7rem;margin-bottom:5px;font-size:.8rem;gap:.5rem}
+li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem}
+.tag{font-size:.62rem;font-weight:700;padding:.1rem .45rem;border-radius:8px;white-space:nowrap}
+.tag.b{background:#d6e4ff;color:#003580}
+.tag.a{background:#ffe0e2;color:#c0353a}
+.tag.m{background:#fde8e8;color:#c04040}
+.note{color:#b07010;font-size:.72rem}
+#login{max-width:300px;margin:22vh auto;text-align:center}
+#login h1{font-size:1.2rem;color:#0a2d40;margin-bottom:.3rem}
+#login p{font-size:.8rem;color:#5a8a9a;margin-bottom:1rem}
+#login input{text-align:center;letter-spacing:.15em;margin-bottom:.8rem}
+.err{color:#e05a5a;font-size:.8rem;margin-bottom:.6rem;display:none}
+.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#0a2d40;color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.8rem;display:none;z-index:99}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>A Casina de Cris</h1>
+  <p>Panel de administracion</p>
+  <div class="fg"><input id="pw" type="password" placeholder="Contrasena" autocomplete="current-password"></div>
+  <div class="err" id="lerr">Contrasena incorrecta</div>
+  <button class="btn blue" onclick="login()">Entrar</button>
+</div>
+<div id="app" style="display:none">
+<header><h1>Casina · Reservas</h1><button class="logout" onclick="logout()">Salir</button></header>
+<main>
+  <div class="card">
+    <div class="calnav"><button onclick="mv(-1)">&#8249;</button><b id="mtitle"></b><button onclick="mv(1)">&#8250;</button></div>
+    <div class="grid" id="cal"></div>
+    <div class="leg">
+      <span><i style="background:#e8f8f0;border:1px solid #4caf82"></i>Libre</span>
+      <span><i style="background:#fde8e8;border:1px solid #e05a5a"></i>Manual</span>
+      <span><i style="background:#d6e4ff;border:1px solid #003580"></i>Booking</span>
+      <span><i style="background:#ffe0e2;border:1px solid #FF5A5F"></i>Airbnb</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Bloquear / liberar periodo</h2>
+    <div class="row2">
+      <div class="fg"><label>Desde</label><input id="f-from" type="date"></div>
+      <div class="fg"><label>Hasta</label><input id="f-to" type="date"></div>
+    </div>
+    <div class="fg"><label>Motivo (opcional)</label><input id="f-note" type="text" placeholder="Ej: reserva telefonica de Maria"></div>
+    <div class="btns">
+      <button class="btn red" onclick="blockRange()">Bloquear</button>
+      <button class="btn green" onclick="freeRange()">Liberar</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Proximas ocupaciones</h2>
+    <ul id="list"></ul>
+  </div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var pwd=null, manualDays=[], extB=[], extA=[], notes=[];
+var now=new Date(); now.setHours(0,0,0,0);
+var vy=now.getFullYear(), vm=now.getMonth();
+var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function pad(n){return (n<10?'0':'')+n;}
+function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function addD(ds,n){var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return dstr(d);}
+function inR(ds,r){return ds>=r.from&&ds<=r.to;}
+function extOf(ds){for(var i=0;i<extB.length;i++)if(inR(ds,extB[i]))return{src:'Booking',cls:'bkg',r:extB[i]};for(var j=0;j<extA.length;j++)if(inR(ds,extA[j]))return{src:'Airbnb',cls:'abn',r:extA[j]};return null;}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}
+function expand(rs){var out=[];(rs||[]).forEach(function(r){var d=r.from,g=0;while(d<=r.to&&g++<800){out.push(d);d=addD(d,1);}});return out;}
+function group(days){var s=days.slice().sort(),bl=[];s.forEach(function(d){var l=bl[bl.length-1];if(l&&addD(l.to,1)===d)l.to=d;else bl.push({from:d,to:d});});return bl;}
+async function api(body){var r=await fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r;}
+async function login(){
+  var p=document.getElementById('pw').value;
+  var r=null; try{r=await api({password:p});}catch(e){}
+  if(r&&r.ok){pwd=p;try{sessionStorage.setItem('apwd',p);}catch(e){}
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    load();
+  }else{document.getElementById('lerr').style.display='block';}
+}
+function logout(){pwd=null;try{sessionStorage.removeItem('apwd');}catch(e){}location.reload();}
+async function load(){
+  var d=await (await fetch('/.netlify/functions/get-availability?t='+Date.now())).json();
+  manualDays=expand(d.manualRanges||[]);
+  extB=(d.external&&d.external.booking)||[];
+  extA=(d.external&&d.external.airbnb)||[];
+  notes=d.notes||[];
+  render();
+}
+async function save(){
+  var body={password:pwd,busyRanges:group(manualDays),notes:notes};
+  var r=null; try{r=await api(body);}catch(e){}
+  if(r&&r.ok){toast('Guardado');await load();}
+  else if(r&&r.status===401){toast('Sesion caducada');logout();}
+  else{toast('Error al guardar');}
+}
+function mv(n){vm+=n;if(vm<0){vm=11;vy--;}if(vm>11){vm=0;vy++;}render();}
+function render(){
+  document.getElementById('mtitle').textContent=MES[vm]+' '+vy;
+  var g='<div class="dn">LU</div><div class="dn">MA</div><div class="dn">MI</div><div class="dn">JU</div><div class="dn">VI</div><div class="dn">SA</div><div class="dn">DO</div>';
+  var first=new Date(vy,vm,1),start=(first.getDay()+6)%7,dim=new Date(vy,vm+1,0).getDate();
+  for(var i=0;i<start;i++)g+='<div class="d empty"></div>';
+  for(var d=1;d<=dim;d++){
+    var dt=new Date(vy,vm,d),ds=dstr(dt),cls='d',click='';
+    if(dt<now)cls+=' past';
+    else{var ex=extOf(ds);
+      if(ex)cls+=' '+ex.cls;
+      else if(manualDays.indexOf(ds)>=0)cls+=' man';
+      else cls+=' free';
+      click=' onclick="tap(&quot;'+ds+'&quot;)"';
+    }
+    if(dt.getTime()===now.getTime())cls+=' today';
+    g+='<div class="'+cls+'"'+click+'>'+d+'</div>';
+  }
+  document.getElementById('cal').innerHTML=g;
+  renderList();
+}
+function notesOver(r){return notes.filter(function(n){return !(n.to<r.from||n.from>r.to);});}
+function renderList(){
+  var today=dstr(now);
+  var items=[];
+  group(manualDays).forEach(function(r){if(r.to>=today)items.push({r:r,src:'Manual',cls:'m',del:true});});
+  extB.forEach(function(r){if(r.to>=today)items.push({r:r,src:'Booking',cls:'b'});});
+  extA.forEach(function(r){if(r.to>=today)items.push({r:r,src:'Airbnb',cls:'a'});});
+  items.sort(function(x,y){return x.r.from<y.r.from?-1:1;});
+  var h='';
+  items.forEach(function(it){
+    var ns=it.del?notesOver(it.r):[];
+    h+='<li><span>'+fmt(it.r.from)+' &rarr; '+fmt(it.r.to)
+      +(ns.length?' <span class="note">&#128221; '+ns.map(function(n){return esc(n.note);}).join(' / ')+'</span>':'')
+      +'</span><span class="tag '+it.cls+'">'+it.src+'</span>'
+      +(it.del?'<button class="x" onclick="delRange(&quot;'+it.r.from+'&quot;,&quot;'+it.r.to+'&quot;)">&#10005;</button>':'')
+      +'</li>';
+  });
+  document.getElementById('list').innerHTML=h||'<li>Nada proximo</li>';
+}
+function fmt(ds){var p=ds.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
+function esc(s){return String(s).replace(/</g,'&lt;');}
+function tap(ds){
+  var ex=extOf(ds);
+  if(ex){alert('Dia '+fmt(ds)+': reserva de '+ex.src+' ('+fmt(ex.r.from)+' a '+fmt(ex.r.to)+'). Se gestiona en '+ex.src+'.');return;}
+  if(manualDays.indexOf(ds)>=0){
+    var ns=notes.filter(function(n){return inR(ds,n);});
+    var msg='Dia '+fmt(ds)+' bloqueado.';
+    if(ns.length)msg+=' Motivo: '+ns.map(function(n){return n.note;}).join(' / ');
+    if(confirm(msg+' Desbloquear este dia?')){
+      manualDays=manualDays.filter(function(x){return x!==ds;});
+      save();
+    }
+  }else{
+    if(confirm('Bloquear el dia '+fmt(ds)+'?')){manualDays.push(ds);save();}
+  }
+}
+function blockRange(){
+  var f=document.getElementById('f-from').value,t=document.getElementById('f-to').value;
+  var m=document.getElementById('f-note').value.trim();
+  if(!f||!t||t<f){toast('Revisa las fechas');return;}
+  expand([{from:f,to:t}]).forEach(function(d){if(manualDays.indexOf(d)<0)manualDays.push(d);});
+  if(m)notes.push({from:f,to:t,note:m});
+  document.getElementById('f-note').value='';
+  save();
+}
+function freeRange(){
+  var f=document.getElementById('f-from').value,t=document.getElementById('f-to').value;
+  if(!f||!t||t<f){toast('Revisa las fechas');return;}
+  manualDays=manualDays.filter(function(d){return d<f||d>t;});
+  notes=notes.filter(function(n){return !(n.from>=f&&n.to<=t);});
+  save();
+}
+function delRange(f,t){
+  if(!confirm('Liberar '+fmt(f)+' a '+fmt(t)+'?'))return;
+  manualDays=manualDays.filter(function(d){return d<f||d>t;});
+  notes=notes.filter(function(n){return !(n.from>=f&&n.to<=t);});
+  save();
+}
+document.getElementById('pw').addEventListener('keydown',function(e){if(e.key==='Enter')login();});
+(function(){
+  var s=null; try{s=sessionStorage.getItem('apwd');}catch(e){}
+  if(s){pwd=s;document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';load();}
+})();
+</script>
+</body>
+</html>
