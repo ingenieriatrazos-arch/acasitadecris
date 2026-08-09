@@ -27,6 +27,7 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({
         busyRanges: merged,
         config: data.config || {},
+        notes: data.notes || [],
         manualRanges: data.busyRanges || [],
         external: {
           booking: external.booking || [],
@@ -40,7 +41,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ busyRanges: [], config: {}, error: error.message })
+      body: JSON.stringify({ busyRanges: [], config: {}, notes: [], error: error.message })
     };
   }
 };
