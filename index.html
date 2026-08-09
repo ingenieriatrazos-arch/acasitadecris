@@ -1056,7 +1056,7 @@ function sendForm(){
 </body>
 </html>
 <script>
-/* Bloqueos con motivo v2 */
+/* Bloqueos con motivo v3 (+colores Booking/Airbnb) */
 (function(){
   var NPWD='04062005';
   var notesData=[], extBooking=[], extAirbnb=[];
@@ -1076,6 +1076,7 @@ function sendForm(){
       notesData=d.notes||[];
       if(d.external){ extBooking=d.external.booking||[]; extAirbnb=d.external.airbnb||[]; }
       try{renderBusyList();}catch(e){}
+      try{renderACal();}catch(e){}
     });
   }
   function buildUI(){
@@ -1095,6 +1096,16 @@ function sendForm(){
       +'<button class="abtn abtn-success" type="button" onclick="addFree()">&#128994; Liberar periodo</button>'
       +'</div>';
     sec.parentNode.insertBefore(div,sec);
+    var cal=document.getElementById('a-cal');
+    if(cal && !document.getElementById('a-cal-legend')){
+      var leg=document.createElement('div');
+      leg.id='a-cal-legend';
+      leg.style.cssText='display:flex;gap:.9rem;flex-wrap:wrap;margin-top:.5rem;font-size:.7rem;color:#3a6a7a';
+      leg.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fde8e8;border:1.5px solid #e05a5a"></span> Bloqueo manual</span>'
+        +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d6e4ff;border:1.5px solid #003580"></span> Reserva Booking</span>'
+        +'<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#ffe0e2;border:1.5px solid #FF5A5F"></span> Reserva Airbnb</span>';
+      cal.parentNode.insertBefore(leg,cal.nextSibling);
+    }
   }
   var _addBusy=window.addBusy;
   window.addBusy=function(){
@@ -1150,6 +1161,22 @@ function sendForm(){
       notesData.filter(function(n){ return !(n.to<r.from||n.from>r.to); }).forEach(function(n){
         span.innerHTML+=' <em style="color:#b07010;font-style:normal;font-size:.72rem">&#128221; '+String(n.note).replace(/</g,'&lt;')+'</em>';
       });
+    });
+  };
+  var _rACal=window.renderACal;
+  window.renderACal=function(){
+    _rACal();
+    var el=document.getElementById('a-cal'); if(!el) return;
+    el.querySelectorAll('.admin-day').forEach(function(c){
+      var oc=c.getAttribute('onclick')||'';
+      var m=oc.match(/aToggle\('([\d-]+)'\)/);
+      if(!m) return;
+      var ext=extInfo(m[1]);
+      if(ext){
+        if(ext.src==='Booking'){ c.style.background='#d6e4ff'; c.style.borderColor='#003580'; c.style.color='#003580'; }
+        else { c.style.background='#ffe0e2'; c.style.borderColor='#FF5A5F'; c.style.color='#c0353a'; }
+        c.title='Reserva de '+ext.src+' ('+ext.r.from+' a '+ext.r.to+')';
+      }
     });
   };
   buildUI(); nfetch();
