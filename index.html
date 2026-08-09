@@ -598,7 +598,7 @@ async function saveCloudAvailability() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        password: '04062005',
+        password: window._apwd,
         busyRanges: calCfg.busyRanges
       })
     });
@@ -613,7 +613,7 @@ async function saveCloudConfig() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        password: '04062005',
+        password: window._apwd,
         busyRanges: calCfg.busyRanges,
         config: {
           priceLow: calCfg.priceLow,
@@ -807,8 +807,12 @@ function updatePriceDisplay(){
   document.getElementById('display-high').textContent=calCfg.priceHigh+'€';
 }
 function openAdmin(){ document.getElementById('login-overlay').classList.add('open'); setTimeout(function(){document.getElementById('pwd-input').focus();},100); }
-function checkPwd(){
-  if(document.getElementById('pwd-input').value==='04062005'){
+async function checkPwd(){
+  var _p=document.getElementById('pwd-input').value;
+  var _r=null;
+  try{ _r=await fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:_p})}); }catch(e){}
+  if(_r&&_r.ok){
+    window._apwd=_p; try{sessionStorage.setItem('apwd',_p);}catch(e){}
     document.getElementById('login-overlay').classList.remove('open');
     document.getElementById('admin-overlay').classList.add('open');
     document.getElementById('a-low').value=calCfg.priceLow;
@@ -1058,7 +1062,7 @@ function sendForm(){
 <script>
 /* Bloqueos con motivo v3 (+colores Booking/Airbnb) */
 (function(){
-  var NPWD='04062005';
+  
   var notesData=[], extBooking=[], extAirbnb=[];
   function inR(ds,r){ return ds>=r.from && ds<=r.to; }
   function extInfo(ds){
@@ -1068,7 +1072,7 @@ function sendForm(){
   }
   function saveNotesDelayed(){
     setTimeout(function(){
-      fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:NPWD,notes:notesData})});
+      fetch('/.netlify/functions/save-availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:window._apwd,notes:notesData})});
     },2000);
   }
   function nfetch(){
@@ -1179,6 +1183,7 @@ function sendForm(){
       }
     });
   };
+  try{window._apwd=sessionStorage.getItem('apwd')||window._apwd;}catch(e){}
   buildUI(); nfetch();
 })();
 </script>
