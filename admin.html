@@ -125,7 +125,7 @@ var pwd=null, manualDays=[], extB=[], extA=[], notes=[];
 var now=new Date(); now.setHours(0,0,0,0);
 var vy=now.getFullYear(), vm=now.getMonth();
 var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-var TPL_DEF='Hola {nombre}, soy Roberto de A Casiña de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 12:00. Cualquier duda, escríbeme por aquí. ¡Gracias! El código de entrada es 260000 y la wifi podéis verla en la parte de atrás del router :)';
+var TPL_DEF='Hola {nombre}, soy Roberto de A Casiña de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 12:00. Cualquier duda, escríbeme por aquí. ¡Gracias! El código de entrada es 260000 y la wifi podéis verla en la parte de atrás del router :) Antes de llegar, completad el check-in online aquí: https://acasitadecris.com/checkin.html';
 function getTpl(){try{return localStorage.getItem('watpl')||TPL_DEF;}catch(e){return TPL_DEF;}}
 function editTpl(){
   var t=prompt('Plantilla del WhatsApp. Puedes usar {nombre}, {desde} y {hasta}:',getTpl());
