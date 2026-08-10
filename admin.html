@@ -58,6 +58,9 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 #login p{font-size:.8rem;color:#5a8a9a;margin-bottom:1rem}
 #login input{text-align:center;letter-spacing:.15em;margin-bottom:.8rem}
 .err{color:#e05a5a;font-size:.8rem;margin-bottom:.6rem;display:none}
+.d.conf{background:#ffdfba;border-color:#e05a5a;color:#7a1f1f}
+#confcard{border-color:#e05a5a}
+#confcard h2{color:#e05a5a;border-bottom-color:#f5c6c6}
 .toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#0a2d40;color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.8rem;display:none;z-index:99}
 #sheetbg{display:none;position:fixed;inset:0;background:rgba(5,20,35,.55);z-index:50}
 #sheetbg.open{display:flex;align-items:flex-end}
@@ -80,6 +83,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 <header><h1>Casina · Reservas</h1><button class="logout" onclick="logout()">Salir</button></header>
 <main>
   <div class="card" id="nextcard" style="display:none"><h2>Proxima reserva</h2><div id="nextbox" style="font-size:.88rem;line-height:1.7"></div></div>
+  <div class="card" id="confcard" style="display:none"><h2>&#9888; Conflictos de fechas</h2><div id="confbox" style="font-size:.85rem;line-height:1.7"></div></div>
   <div class="card">
     <div class="calnav"><button onclick="mv(-1)">&#8249;</button><b id="mtitle"></b><button onclick="mv(1)">&#8250;</button></div>
     <div class="grid" id="cal"></div>
@@ -88,6 +92,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
       <span><i style="background:#fde8e8;border:1px solid #e05a5a"></i>Manual</span>
       <span><i style="background:#d6e4ff;border:1px solid #003580"></i>Booking</span>
       <span><i style="background:#ffe0e2;border:1px solid #FF5A5F"></i>Airbnb</span>
+      <span><i style="background:#ffdfba;border:1px solid #e05a5a"></i>&#9888; Conflicto</span>
       <span>&#128221; = con nota</span>
     </div>
   </div>
@@ -171,11 +176,15 @@ function render(){
     var dt=new Date(vy,vm,d),ds=dstr(dt),cls='d',click='',mark='';
     if(dt<now)cls+=' past';
     else{var ex=extOf(ds);
+      var inB=extB.some(function(rr){return inR(ds,rr);}),inA=extA.some(function(rr){return inR(ds,rr);}),inM=manualDays.indexOf(ds)>=0;
+      var nsrc=(inB?1:0)+(inA?1:0)+(inM?1:0);
       if(ex)cls+=' '+ex.cls;
-      else if(manualDays.indexOf(ds)>=0)cls+=' man';
+      else if(inM)cls+=' man';
       else cls+=' free';
+      if(nsrc>=2)cls+=' conf';
       click=' onclick="tap(&quot;'+ds+'&quot;)"';
-      if(notesFor(ds).length)mark='<span class="np">&#128221;</span>';
+      if(nsrc>=2)mark='<span class="np">&#9888;</span>';
+      else if(notesFor(ds).length)mark='<span class="np">&#128221;</span>';
     }
     if(dt.getTime()===now.getTime())cls+=' today';
     g+='<div class="'+cls+'"'+click+'>'+d+mark+'</div>';
@@ -183,6 +192,7 @@ function render(){
   document.getElementById('cal').innerHTML=g;
   renderList();
   renderNext();
+  renderConf();
 }
 function esc(s){return String(s).replace(/</g,'&lt;');}
 function fmt(ds){var p=ds.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
@@ -315,6 +325,28 @@ function renderNext(){
   if(!h)h='<div>Sin reservas proximas</div>';
   box.innerHTML=h;
   ncard.style.display='block';
+}
+function renderConf(){
+  var bD=expand(extB), aD=expand(extA);
+  var all={};
+  manualDays.forEach(function(d){(all[d]=all[d]||[]).push('Manual');});
+  bD.forEach(function(d){(all[d]=all[d]||[]).push('Booking');});
+  aD.forEach(function(d){(all[d]=all[d]||[]).push('Airbnb');});
+  var today=dstr(now);
+  var confDays=Object.keys(all).filter(function(d){return d>=today&&all[d].length>=2;}).sort();
+  var card=document.getElementById('confcard'),box=document.getElementById('confbox');
+  if(!card)return;
+  if(!confDays.length){card.style.display='none';return;}
+  var groups=[];
+  confDays.forEach(function(d){
+    var key=all[d].join(' + ');
+    var l=groups[groups.length-1];
+    if(l&&l.key===key&&addD(l.to,1)===d){l.to=d;}
+    else groups.push({from:d,to:d,key:key});
+  });
+  box.innerHTML=groups.map(function(g){return '<div>&#9888; '+fmt(g.from)+' &rarr; '+fmt(g.to)+': <b>'+g.key+'</b></div>';}).join('')
+    +'<div style="font-size:.72rem;color:#5a8a9a;margin-top:.4rem">El mismo dia esta ocupado por dos vias. Si es un duplicado tuyo (bloqueo manual encima de una reserva de plataforma), libera el bloqueo manual. Si son dos reservas reales de plataformas distintas, contacta con un huesped cuanto antes.</div>';
+  card.style.display='block';
 }
 document.getElementById('pw').addEventListener('keydown',function(e){if(e.key==='Enter')login();});
 (function(){
