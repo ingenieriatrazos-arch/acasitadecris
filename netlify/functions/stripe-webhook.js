@@ -1,5 +1,5 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { reservasStore } = require('./ical-lib');
+const { reservasStore, sendEmail, fmtES } = require('./ical-lib');
 
 const MESES = {
   enero:'01', febrero:'02', marzo:'03', abril:'04', mayo:'05', junio:'06',
@@ -70,6 +70,17 @@ exports.handler = async function(event, context) {
 
         await store.setJSON('ocupados', current);
         console.log('Reserva guardada:', ci, '->', lastNight, email, amount);
+
+        try {
+          const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">'
+            + '<div style="background:#1a6a8f;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:16px;font-weight:700">A Casina de Cris - Reserva pagada en la web</div>'
+            + '<div style="border:1px solid #d0e8f5;border-top:none;border-radius:0 0 10px 10px;padding:20px;font-size:14px;color:#1a3a4a">'
+            + '<p><b>Entrada:</b> ' + fmtES(ci) + '<br><b>Salida:</b> ' + fmtES(co) + '</p>'
+            + '<p><b>Email del huesped:</b> ' + (email || 'no facilitado') + '<br><b>Importe cobrado:</b> ' + amount + ' EUR</p>'
+            + '<p style="font-size:12px;color:#5a8a9a">Las fechas quedan bloqueadas automaticamente. Calendario: <a href="https://acasitadecris.com/admin.html">acasitadecris.com/admin.html</a></p>'
+            + '</div></div>';
+          await sendEmail('Reserva pagada en la web: ' + fmtES(ci) + ' - ' + fmtES(co) + ' (' + amount + ' EUR)', html);
+        } catch(e){ console.error('Error notificando:', e); }
       } catch (err) {
         console.error('Error guardando reserva:', err);
       }
