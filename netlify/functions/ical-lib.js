@@ -24,6 +24,11 @@ function fmtES(iso){
   return p[2]+'/'+p[1]+'/'+p[0];
 }
 
+function todayMadrid(){
+  try { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }); }
+  catch(e){ return new Date().toISOString().slice(0,10); }
+}
+
 function addDaysCompact(yyyymmdd, n){
   const d = new Date(Date.UTC(+yyyymmdd.slice(0,4), +yyyymmdd.slice(4,6)-1, +yyyymmdd.slice(6,8)));
   d.setUTCDate(d.getUTCDate()+n);
@@ -81,19 +86,28 @@ async function sendEmail(subject, html){
   }
 }
 
-async function notifyNewExternal(added){
+async function notifyNewExternal(added, conflictos){
   const nice = { booking: 'Booking', airbnb: 'Airbnb' };
   const items = added.map(function(a){
     return '<li style="margin-bottom:6px"><b>' + nice[a.src] + '</b>: ' + fmtES(a.r.from) + ' &rarr; ' + fmtES(a.r.to) + '</li>';
   }).join('');
   const first = added[0];
-  const subject = 'Nueva reserva en ' + nice[first.src] + ': ' + fmtES(first.r.from) + ' - ' + fmtES(first.r.to) + (added.length > 1 ? ' (+' + (added.length - 1) + ' mas)' : '');
+  let subject = 'Nueva reserva en ' + nice[first.src] + ': ' + fmtES(first.r.from) + ' - ' + fmtES(first.r.to) + (added.length > 1 ? ' (+' + (added.length - 1) + ' mas)' : '');
+  let confHtml = '';
+  if (conflictos && conflictos.length) {
+    subject = 'ALERTA DOBLE RESERVA - ' + subject;
+    confHtml = '<div style="background:#fde8e8;border:2px solid #e05a5a;border-radius:8px;padding:12px 16px;margin-top:12px">'
+      + '<b style="color:#a32d2d">&#9888; CONFLICTO: estas fechas ya estaban ocupadas por otra via:</b>'
+      + '<ul style="color:#a32d2d">' + conflictos.map(function(c){ return '<li>' + c + '</li>'; }).join('') + '</ul>'
+      + '<span style="font-size:12px;color:#a32d2d">Revisa el calendario y contacta con el huesped si hay dos reservas reales.</span></div>';
+  }
   const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">'
-    + '<div style="background:#1a6a8f;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:16px;font-weight:700">A Casina de Cris - Nueva ocupacion detectada</div>'
+    + '<div style="background:' + (confHtml ? '#a32d2d' : '#1a6a8f') + ';color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:16px;font-weight:700">A Casina de Cris - ' + (confHtml ? 'ALERTA de doble reserva' : 'Nueva ocupacion detectada') + '</div>'
     + '<div style="border:1px solid #d0e8f5;border-top:none;border-radius:0 0 10px 10px;padding:20px">'
-    + '<p style="font-size:14px;color:#1a3a4a">Se han detectado fechas nuevas en la sincronizacion de calendarios:</p>'
+    + '<p style="font-size:14px;color:#1a3a4a">Fechas nuevas detectadas en la sincronizacion:</p>'
     + '<ul style="font-size:14px;color:#1a3a4a">' + items + '</ul>'
-    + '<p style="font-size:12px;color:#5a8a9a">Consulta el detalle del huesped en el panel de la plataforma. Calendario: <a href="https://acasitadecris.com/admin.html">acasitadecris.com/admin.html</a></p>'
+    + confHtml
+    + '<p style="font-size:12px;color:#5a8a9a">Calendario: <a href="https://acasitadecris.com/admin.html">acasitadecris.com/admin.html</a></p>'
     + '</div></div>';
   await sendEmail(subject, html);
 }
@@ -111,6 +125,7 @@ async function ensureFreshExternal(store, maxAgeMinutes){
   }
   if (age < max) return ext;
 
+  const hoy = todayMadrid();
   const out = {
     booking: ext.booking || [],
     airbnb: ext.airbnb || [],
@@ -122,10 +137,14 @@ async function ensureFreshExternal(store, maxAgeMinutes){
   for (const key of Object.keys(sources)){
     if (!sources[key]) continue;
     try {
-      out[key] = await fetchIcal(sources[key]);
+      let ranges = await fetchIcal(sources[key]);
+      if (key === 'airbnb') {
+        ranges = ranges.filter(function(r){ return !(r.from === hoy && r.to === hoy); });
+      }
+      out[key] = ranges;
       if (hadPrevious) {
         const oldSet = new Set((ext[key] || []).map(function(r){ return r.from + '|' + r.to; }));
-        out[key].forEach(function(r){
+        ranges.forEach(function(r){
           if (!oldSet.has(r.from + '|' + r.to)) added.push({ src: key, r: r });
         });
       }
@@ -134,10 +153,34 @@ async function ensureFreshExternal(store, maxAgeMinutes){
     }
   }
   await store.setJSON('externos', out);
+
   if (added.length) {
-    try { await notifyNewExternal(added); } catch(e){ console.error(e); }
+    let conflictos = [];
+    try {
+      const oc = await store.get('ocupados', { type: 'json' }) || {};
+      const manualSet = expandDays(oc.busyRanges || []);
+      const bDays = expandDays(out.booking);
+      const aDays = expandDays(out.airbnb);
+      added.forEach(function(a){
+        expandDays([a.r]).forEach(function(d){
+          if (d < hoy) return;
+          const inMan = manualSet.has(d);
+          const otherDays = a.src === 'booking' ? aDays : bDays;
+          const otherName = a.src === 'booking' ? 'Airbnb' : 'Booking';
+          const inOther = otherDays.has(d);
+          if (inMan || inOther) {
+            const vias = [];
+            if (inMan) vias.push('bloqueo manual');
+            if (inOther) vias.push(otherName);
+            conflictos.push(fmtES(d) + ' (ya ocupado por: ' + vias.join(' y ') + ')');
+          }
+        });
+      });
+      conflictos = conflictos.slice(0, 20);
+    } catch(e){ console.error(e); }
+    try { await notifyNewExternal(added, conflictos); } catch(e){ console.error(e); }
   }
   return out;
 }
 
-module.exports = { reservasStore, parseICS, expandDays, ensureFreshExternal, fmtDate, addDaysCompact, sendEmail, fmtES };
+module.exports = { reservasStore, parseICS, expandDays, ensureFreshExternal, fmtDate, addDaysCompact, sendEmail, fmtES, todayMadrid };
