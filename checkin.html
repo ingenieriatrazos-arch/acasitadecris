@@ -158,6 +158,9 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2
         <div class="fg"><label>Teléfono <span>*</span></label><input type="tel" id="t-telefono" placeholder="+34 600 000 000"></div>
         <div class="fg"><label>Email <span>*</span></label><input type="email" id="t-email" placeholder="tu@email.com"></div>
         <div class="fg"><label>Dirección <span>*</span></label><input type="text" id="t-direccion" placeholder="Calle, número, ciudad"></div>
+        <div class="fg"><label>Código postal <span>*</span></label><input type="text" id="t-cp" placeholder="15930"></div>
+        <div class="fg"><label>País de residencia <span>*</span></label><select id="t-pais"><option value="ESP" selected>España</option><option value="PRT">Portugal</option><option value="FRA">Francia</option><option value="DEU">Alemania</option><option value="GBR">Reino Unido</option><option value="ITA">Italia</option><option value="USA">EEUU</option><option value="NLD">Países Bajos</option></select></div>
+        <div class="fg"><label>Nº soporte del documento</label><input type="text" id="t-soporte" placeholder="Ej: ABC123456"><div class="hint">Obligatorio con DNI/NIE (figura en el documento)</div></div>
       </div>
     </div>
 
@@ -287,7 +290,7 @@ function setStep(n) {
 function goToStep1() { setStep(1); }
 
 function goToStep2() {
-  var required = ['t-nombre','t-apellidos','t-dni','t-nacimiento','t-nacionalidad','t-telefono','t-email','t-direccion'];
+  var required = ['t-nombre','t-apellidos','t-dni','t-nacimiento','t-nacionalidad','t-telefono','t-email','t-direccion','t-cp'];
   for (var id of required) {
     if (!document.getElementById(id).value.trim()) {
       showToast('Por favor rellena todos los campos obligatorios');
@@ -310,6 +313,7 @@ function addAcompanante() {
     '<div class="fg"><label>Nombre <span>*</span></label><input type="text" id="a'+n+'-nombre" placeholder="Nombre"></div>' +
     '<div class="fg"><label>Apellidos <span>*</span></label><input type="text" id="a'+n+'-apellidos" placeholder="Apellidos"></div>' +
     '<div class="fg"><label>DNI / NIE / Pasaporte <span>*</span></label><input type="text" id="a'+n+'-dni" placeholder="12345678A"></div>' +
+    '<div class="fg"><label>Nº soporte doc.</label><input type="text" id="a'+n+'-soporte" placeholder="Solo DNI/NIE"></div>' +
     '<div class="fg"><label>Fecha de nacimiento <span>*</span></label><input type="date" id="a'+n+'-nacimiento"></div>' +
     '<div class="fg"><label>Nacionalidad <span>*</span></label><select id="a'+n+'-nacionalidad"><option value="">Selecciona...</option><option value="Española" selected>Española</option><option value="Francesa">Francesa</option><option value="Portuguesa">Portuguesa</option><option value="Alemana">Alemana</option><option value="Italiana">Italiana</option><option value="Británica">Británica</option><option value="Otra">Otra</option></select></div>' +
     '<div class="fg"><label>Dirección</label><input type="text" id="a'+n+'-direccion" placeholder="Calle, número, ciudad"></div>' +
@@ -361,6 +365,7 @@ function goToStep3() {
   setStep(3);
 }
 
+function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
 async function submitCheckin() {
   var btn = document.getElementById('btn-confirmar');
   btn.disabled = true;
@@ -424,6 +429,19 @@ async function submitCheckin() {
   } catch(e) {
     console.error('Error enviando email:', e);
   }
+
+  try {
+    var sesAcomps=[];
+    for (var k=1;k<=acompanantesCount;k++){
+      if(!document.getElementById('acomp-'+k))continue;
+      sesAcomps.push({nombre:val('a'+k+'-nombre'),apellidos:val('a'+k+'-apellidos'),dni:val('a'+k+'-dni'),soporte:val('a'+k+'-soporte'),nacimiento:val('a'+k+'-nacimiento'),nacionalidad:val('a'+k+'-nacionalidad'),direccion:val('a'+k+'-direccion')});
+    }
+    fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      reserva:{checkin:bookingData.checkin,checkout:bookingData.checkout},
+      titular:{nombre:val('t-nombre'),apellidos:val('t-apellidos'),dni:val('t-dni'),soporte:val('t-soporte'),nacimiento:val('t-nacimiento'),nacionalidad:val('t-nacionalidad'),telefono:val('t-telefono'),email:val('t-email'),direccion:val('t-direccion'),cp:val('t-cp'),pais:val('t-pais')},
+      acompanantes:sesAcomps
+    })});
+  } catch(e){ console.error('Error SES:', e); }
 
   // Send via WhatsApp
   var waUrl = 'https://wa.me/34679536015?text=' + encodeURIComponent(msg);
