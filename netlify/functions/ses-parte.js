@@ -69,11 +69,17 @@ async function soapCall(bodyInner){
   if(!user||!pass) throw new Error('Faltan credenciales SES (SES_USER/SES_ARRENDADOR y SES_PASS)');
   const base=process.env.SES_TEST==='1'?'https://hospedajes.pre-ses.mir.es':'https://hospedajes.ses.mir.es';
   const env='<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:com="http://www.soap.servicios.hospedajes.mir.es/comunicacion"><soapenv:Header/><soapenv:Body>'+bodyInner+'</soapenv:Body></soapenv:Envelope>';
-  const res=await fetch(base+'/hospedajes-web/ws/v1/comunicacion',{
-    method:'POST',
-    headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'','Authorization':'Basic '+Buffer.from(user+':'+pass).toString('base64')},
-    body:env
-  });
+  let res;
+  try{
+    res=await fetch(base+'/hospedajes-web/ws/v1/comunicacion',{
+      method:'POST',
+      headers:{'Content-Type':'text/xml; charset=utf-8','SOAPAction':'','Authorization':'Basic '+Buffer.from(user+':'+pass).toString('base64')},
+      body:env
+    });
+  }catch(e){
+    const c=e&&e.cause?(e.cause.code||e.cause.message||''):'';
+    throw new Error('No se pudo conectar con SES ('+base+'): '+e.message+(c?' | causa: '+c:''));
+  }
   const text=await res.text();
   return {status:res.status,text:text};
 }
