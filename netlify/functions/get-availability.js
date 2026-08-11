@@ -1,4 +1,4 @@
-const { reservasStore, ensureFreshExternal } = require('./ical-lib');
+const { getStore } = require('@netlify/blobs');
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -7,47 +7,30 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    const store = reservasStore();
-    const data = await store.get('ocupados', { type: 'json' }) || { busyRanges: [], config: {} };
+    const store = getStore({
+      name: 'reservas',
+      siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
+      token: process.env.NETLIFY_TOKEN,
+      consistency: 'strong'
+    });
 
-    const force = event.queryStringParameters && event.queryStringParameters.force === '1';
-    let external = { booking: [], airbnb: [], updatedAt: null };
-    try {
-      external = await ensureFreshExternal(store, force ? 0 : 30);
-    } catch (e) {
-      console.error('Error syncing external icals:', e);
-    }
+    const data = await store.get('ocupados', { type: 'json' }) || {};
+    // Fechas bloqueadas manualmente (panel) + las importadas de Airbnb/Booking (ical-sync)
+    const external = await store.get('external', { type: 'json' }) || [];
 
-    const merged = (data.busyRanges || [])
-      .concat(external.booking || [])
-      .concat(external.airbnb || []);
+    const busyRanges = [].concat(data.busyRanges || [], external);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        busyRanges: merged,
-        config: data.config || {},
-        notes: data.notes || [],
-        manualRanges: data.busyRanges || [],
-        external: {
-          booking: external.booking || [],
-          airbnb: external.airbnb || [],
-          updatedAt: external.updatedAt || null,
-          errors: external.errors || {},
-          sources: {
-            booking: !!process.env.BOOKING_ICAL_URL,
-            airbnb: !!process.env.AIRBNB_ICAL_URL
-          }
-        }
-      })
+      body: JSON.stringify({ busyRanges: busyRanges, config: data.config || {} })
     };
   } catch (error) {
     console.error('Error reading blobs:', error);
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ busyRanges: [], config: {}, notes: [], error: error.message })
+      body: JSON.stringify({ busyRanges: [], error: error.message })
     };
   }
 };
