@@ -24,6 +24,10 @@ function fmtES(iso){
   return p[2]+'/'+p[1]+'/'+p[0];
 }
 
+function diasDesdeHoy(iso, hoy){
+  return Math.round((new Date(iso+'T00:00:00Z') - new Date(hoy+'T00:00:00Z'))/86400000);
+}
+
 function todayMadrid(){
   try { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }); }
   catch(e){ return new Date().toISOString().slice(0,10); }
@@ -139,7 +143,13 @@ async function ensureFreshExternal(store, maxAgeMinutes){
     try {
       let ranges = await fetchIcal(sources[key]);
       if (key === 'airbnb') {
-        ranges = ranges.filter(function(r){ return !(r.from === hoy && r.to === hoy); });
+        ranges = ranges.filter(function(r){
+          if (r.from !== r.to) return true;
+          if (r.from === hoy) return false;
+          const d = diasDesdeHoy(r.from, hoy);
+          if (d >= 358) return false;
+          return true;
+        });
       }
       out[key] = ranges;
       if (hadPrevious) {
