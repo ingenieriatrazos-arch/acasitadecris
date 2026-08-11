@@ -4,8 +4,17 @@
 [functions]
   node_bundler = "esbuild"
 
-# URL amigable para el calendario iCal (para pegar en Airbnb y Booking)
+[[redirects]]
+  from = "/booking.ics"
+  to = "/.netlify/functions/export-ical?src=booking"
+  status = 200
+
+[[redirects]]
+  from = "/airbnb.ics"
+  to = "/.netlify/functions/export-ical?src=airbnb"
+  status = 200
+
 [[redirects]]
   from = "/calendario.ics"
-  to = "/.netlify/functions/ical-export"
+  to = "/.netlify/functions/export-ical"
   status = 200
