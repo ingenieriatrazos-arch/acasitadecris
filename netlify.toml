@@ -4,6 +4,12 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."aviso-checkin"]
+  schedule = "0 8 * * *"
+
+[functions."backup-calendario"]
+  schedule = "0 7 * * 1"
+
 [[redirects]]
   from = "/booking.ics"
   to = "/.netlify/functions/export-ical?src=booking"
