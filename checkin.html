@@ -344,6 +344,23 @@ async function submitCheckin(){
   var d=collectData();
   var payload={titular:d.titular,acompanantes:d.acompanantes,menores:d.menores,reserva:{checkin:bookingData.checkin||'—',checkout:bookingData.checkout||'—',noches:bookingData.noches||''}};
 
+  // 0) Parte de viajeros a SES.Hospedajes
+  try{
+    function pers(pref,rol){
+      return {nombre:val(pref+'-nombre'),apellido1:val(pref+'-apellido1'),apellido2:val(pref+'-apellido2'),
+        sexo:val(pref+'-sexo'),tipoDoc:val(pref+'-tipodoc'),dni:val(pref+'-dni'),soporte:val(pref+'-soporte'),
+        nacimiento:val(pref+'-nacimiento'),nacionalidad:val(pref+'-nacionalidad'),parentesco:val(pref+'-parentesco'),
+        direccion:val(pref+'-direccion')};
+    }
+    var sesTit=pers('t');
+    sesTit.telefono=val('t-telefono'); sesTit.email=val('t-email'); sesTit.cp=val('t-cp'); sesTit.pais=val('t-pais');
+    var sesAc=[],sesMe=[];
+    for(var q=1;q<=acompanantesCount;q++){ if(document.getElementById('acomp-'+q)&&val('a'+q+'-nombre')) sesAc.push(pers('a'+q)); }
+    for(var w=1;w<=menoresCount;w++){ if(document.getElementById('menor-'+w)&&val('m'+w+'-nombre')) sesMe.push(pers('m'+w)); }
+    fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({reserva:{checkin:bookingData.checkin,checkout:bookingData.checkout},titular:sesTit,acompanantes:sesAc,menores:sesMe})});
+  }catch(e){ console.error('Error SES:',e); }
+
   // 1) Email al gestor (Resend)
   try{await fetch('/.netlify/functions/send-checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});}catch(e){console.error('Error email:',e);}
 
