@@ -118,6 +118,16 @@ function makeZip(name, data){
   return Buffer.concat([lfh,cdh,eocd]);
 }
 
+function esMenor(nac, refIso){
+  const f=parseFecha(nac); if(!f) return false;
+  const ref=new Date((refIso||new Date().toISOString().slice(0,10))+'T00:00:00Z');
+  const n=new Date(f+'T00:00:00Z');
+  let edad=ref.getUTCFullYear()-n.getUTCFullYear();
+  const m=ref.getUTCMonth()-n.getUTCMonth();
+  if(m<0||(m===0&&ref.getUTCDate()<n.getUTCDate()))edad--;
+  return edad<18;
+}
+
 function personaXml(p, rol, defaults){
   const doc=String(p.dni||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const td=tipoDoc(doc);
@@ -132,8 +142,11 @@ function personaXml(p, rol, defaults){
   x+='<fechaNacimiento>'+parseFecha(p.nacimiento)+'</fechaNacimiento>';
   x+='<nacionalidad>'+iso3(p.nacionalidad)+'</nacionalidad>';
   x+='<direccion><direccion>'+esc(p.direccion||defaults.direccion)+'</direccion><codigoPostal>'+esc(p.cp||defaults.cp)+'</codigoPostal><pais>'+iso3(p.pais||defaults.pais)+'</pais></direccion>';
-  if(p.telefono)x+='<telefono>'+esc(p.telefono)+'</telefono>';
-  if(p.email)x+='<correo>'+esc(p.email)+'</correo>';
+  var tel=p.telefono||defaults.telefono;
+  if(tel)x+='<telefono>'+esc(tel)+'</telefono>';
+  var mail=p.email||(tel?'':defaults.email);
+  if(mail)x+='<correo>'+esc(mail)+'</correo>';
+  if(p.parentesco)x+='<parentesco>'+esc(p.parentesco)+'</parentesco>';
   x+='</persona>';
   return x;
 }
@@ -175,14 +188,19 @@ exports.handler = async function(event){
       return{statusCode:200,headers,body:JSON.stringify({status:r.status,respuesta:r.text.slice(0,4000)})};
     }
 
-    const {reserva,titular,acompanantes}=JSON.parse(event.body);
+    const {reserva,titular,acompanantes,menores}=JSON.parse(event.body);
     const ci=parseFecha(reserva&&reserva.checkin), co=parseFecha(reserva&&reserva.checkout);
     if(!ci||!co)return{statusCode:400,headers,body:JSON.stringify({error:'Fechas de reserva no validas'})};
     if(!titular||!titular.nombre)return{statusCode:400,headers,body:JSON.stringify({error:'Falta titular'})};
 
-    const defaults={direccion:titular.direccion,cp:titular.cp||'',pais:titular.pais||'ESP'};
-    const personas=[personaXml(titular,'TI',defaults)].concat((acompanantes||[]).map(function(a){return personaXml(a,'VI',defaults);}));
-    const nPers=1+(acompanantes||[]).length;
+    const defaults={direccion:titular.direccion,cp:titular.cp||'',pais:titular.pais||'ESP',telefono:titular.telefono||'',email:titular.email||''};
+    const mens=(menores||[]).filter(function(m){return m&&m.nombre;});
+    const tit=Object.assign({},titular);
+    if(mens.length){ tit.parentesco = mens[0].parentesco || 'PM'; }
+    const personas=[personaXml(tit,'TI',defaults)]
+      .concat((acompanantes||[]).map(function(a){return personaXml(a,'VI',defaults);}))
+      .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; return personaXml(mm,'VI',defaults); }));
+    const nPers=1+(acompanantes||[]).length+mens.length;
     const ref='WEB-'+ci.replace(/-/g,'')+'-'+Date.now().toString(36).toUpperCase();
     const hoy=new Date().toISOString().slice(0,10);
     const tipoPago=process.env.SES_TIPOPAGO||'EFECT';
