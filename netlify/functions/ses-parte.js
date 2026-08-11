@@ -130,7 +130,8 @@ function esMenor(nac, refIso){
 
 function personaXml(p, rol, defaults){
   const doc=String(p.dni||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const td=tipoDoc(doc);
+  const tdRaw=String(p.tipoDoc||'').toUpperCase();
+  const td=(tdRaw==='NIF'||tdRaw==='NIE'||tdRaw==='PAS'||tdRaw==='OTRO')?tdRaw:tipoDoc(doc);
   const ap=String(p.apellidos||'').trim().split(/\s+/);
   const a1=p.apellido1||ap[0]||'';
   const a2=p.apellido2||ap.slice(1).join(' ');
@@ -141,6 +142,8 @@ function personaXml(p, rol, defaults){
     if(p.soporte&&(td==='NIF'||td==='NIE'))x+='<soporteDocumento>'+esc(String(p.soporte).toUpperCase().replace(/[^A-Z0-9]/g,''))+'</soporteDocumento>';}
   x+='<fechaNacimiento>'+parseFecha(p.nacimiento)+'</fechaNacimiento>';
   x+='<nacionalidad>'+iso3(p.nacionalidad)+'</nacionalidad>';
+  var sx=String(p.sexo||'').toUpperCase();
+  if(sx==='H'||sx==='M'||sx==='O')x+='<sexo>'+sx+'</sexo>';
   x+='<direccion><direccion>'+esc(p.direccion||defaults.direccion)+'</direccion><codigoPostal>'+esc(p.cp||defaults.cp)+'</codigoPostal><pais>'+iso3(p.pais||defaults.pais)+'</pais></direccion>';
   var tel=p.telefono||defaults.telefono;
   if(tel)x+='<telefono>'+esc(tel)+'</telefono>';
