@@ -230,6 +230,7 @@ function renderList(){
         +(n.phone?' &middot; <a href="tel:+'+cleanPhone(n.phone)+'">'+esc(n.phone)+'</a> <a href="#" onclick="waSend('+i+');return false" style="color:#1ebe5a">WhatsApp</a>':'')
         +'</span>';}).join('')
       +'</span><span class="tag '+it.cls+'">'+it.src+'</span>'
+      +'<button class="x" style="color:#b07010" title="Nombre y telefono" onclick="editData(&quot;'+it.r.from+'&quot;,&quot;'+it.r.to+'&quot;,&quot;'+it.src+'&quot;)">&#9998;</button>'
       +(it.del?'<button class="x" onclick="delRange(&quot;'+it.r.from+'&quot;,&quot;'+it.r.to+'&quot;)">&#10005;</button>':'')
       +'</li>';
   });
@@ -274,6 +275,37 @@ function renderConf(){
   card.style.display='block';
 }
 </script><script>
+function noteIdxFor(from,to){
+  for(var i=0;i<notes.length;i++){ if(!(notes[i].to<from||notes[i].from>to)) return i; }
+  return -1;
+}
+function calRanges(){return group(manualDays);}
+function editData(from,to,src){
+  var i=noteIdxFor(from,to);
+  var n=i>=0?notes[i]:{note:'',phone:''};
+  var h='<h3>Datos del huesped</h3>';
+  h+='<p style="color:#5a8a9a;font-size:.8rem">'+fmt(from)+' &rarr; '+fmt(to)+(src?' &middot; '+src:'')+'</p>';
+  h+='<div class="fg"><label>Nombre / motivo</label><input id="e-note" type="text" value="'+String(n.note||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Maria Lopez, 2 adultos"></div>';
+  h+='<div class="fg"><label>Telefono</label><input id="e-phone" type="tel" value="'+String(n.phone||'').replace(/"/g,'&quot;')+'" placeholder="Ej: 600123456"></div>';
+  h+='<div class="btns"><button class="btn green" onclick="saveData(&quot;'+from+'&quot;,&quot;'+to+'&quot;)">Guardar</button>';
+  if(i>=0)h+='<button class="btn red" onclick="delData('+i+')">Borrar datos</button>';
+  h+='<button class="btn gray" onclick="closeSheet()">Cancelar</button></div>';
+  sheet(h);
+  setTimeout(function(){var e=document.getElementById('e-note');if(e)e.focus();},150);
+}
+function saveData(from,to){
+  var nota=document.getElementById('e-note').value.trim();
+  var tel=document.getElementById('e-phone').value.trim();
+  var i=noteIdxFor(from,to);
+  if(!nota&&!tel){ if(i>=0)notes.splice(i,1); }
+  else if(i>=0){ notes[i]={from:from,to:to,note:nota,phone:tel}; }
+  else { notes.push({from:from,to:to,note:nota,phone:tel}); }
+  closeSheet(); save();
+}
+function delData(i){
+  if(!confirm('Borrar el nombre y el telefono de esta reserva?'))return;
+  notes.splice(i,1); closeSheet(); save();
+}
 function closeSheet(){document.getElementById('sheetbg').classList.remove('open');}
 function sheet(html){document.getElementById('sheet').innerHTML=html;document.getElementById('sheetbg').classList.add('open');}
 function waMsg(n){var nombre=(n.note||'').split(',')[0].trim()||'';return getTpl().split('{nombre}').join(nombre).split('{desde}').join(fmt(n.from)).split('{hasta}').join(fmt(n.to));}
@@ -312,6 +344,12 @@ function tap(ds){
   ns.forEach(function(n){if(n.phone){var i=notes.indexOf(n);
     h+='<button class="btn green" onclick="callPhone('+i+')">&#128222; Llamar</button>';
     h+='<button class="btn wa" onclick="waSend('+i+')">WhatsApp</button>';}});
+  if(ex)h+='<button class="btn amber" onclick="editData(&quot;'+ex.r.from+'&quot;,&quot;'+ex.r.to+'&quot;,&quot;'+ex.src+'&quot;)">&#9998; Nombre y telefono</button>';
+  else if(man){
+    var _rs=calRanges(), _rr=null;
+    for(var _z=0;_z<_rs.length;_z++){ if(inR(ds,_rs[_z])){ _rr=_rs[_z]; break; } }
+    if(_rr)h+='<button class="btn amber" onclick="editData(&quot;'+_rr.from+'&quot;,&quot;'+_rr.to+'&quot;,&quot;Manual&quot;)">&#9998; Nombre y telefono</button>';
+  }
   if(man)h+='<button class="btn red" onclick="unblockDay(&quot;'+ds+'&quot;)">Desbloquear dia</button>';
   if(!ex&&!man){
     h+='<button class="btn red" onclick="blockDay(&quot;'+ds+'&quot;)">Bloquear solo este dia</button>';
