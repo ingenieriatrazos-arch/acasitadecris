@@ -95,6 +95,10 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2
     <div class="booking-info">
       <h3>A Casiña de Cris · Boiro, A Coruña</h3>
       <p id="booking-dates-display">Cargando datos de la reserva...</p>
+      <div class="form-grid" style="margin-top:.8rem">
+        <div class="fg"><label>Fecha de entrada <span>*</span></label><input type="date" id="r-checkin"></div>
+        <div class="fg"><label>Fecha de salida <span>*</span></label><input type="date" id="r-checkout"></div>
+      </div>
     </div>
   </div>
 
@@ -209,6 +213,11 @@ var PARENTESCOS = ['Cónyuge/pareja','Hijo/a','Padre/Madre','Hermano/a','Otro fa
 function getParam(name){var u=new URLSearchParams(window.location.search);return u.get(name)||'';}
 
 window.onload=function(){
+  setTimeout(function(){
+    var ci=document.getElementById('r-checkin'), co=document.getElementById('r-checkout');
+    if(ci&&getParam('checkin'))ci.value=getParam('checkin');
+    if(co&&getParam('checkout'))co.value=getParam('checkout');
+  },50);
   var checkin=getParam('checkin'),checkout=getParam('checkout'),noches=getParam('noches'),email=getParam('email'),nombre=getParam('nombre');
   bookingData={checkin:checkin,checkout:checkout,noches:noches,email:email,nombre:nombre};
   if(checkin&&checkout){
@@ -344,6 +353,11 @@ function buildWhatsapp(d){
 }
 
 async function submitCheckin(){
+  if(!val('r-checkin')||!val('r-checkout')){
+    showToast('Indica la fecha de entrada y la de salida');
+    var e=document.getElementById('r-checkin'); if(e){e.scrollIntoView({block:'center'});e.focus();}
+    return;
+  }
   var btn=document.getElementById('btn-confirmar');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Enviando...';
   var d=collectData();
@@ -363,7 +377,7 @@ async function submitCheckin(){
     for(var q=1;q<=acompanantesCount;q++){ if(document.getElementById('acomp-'+q)&&val('a'+q+'-nombre')) sesAc.push(pers('a'+q)); }
     for(var w=1;w<=menoresCount;w++){ if(document.getElementById('menor-'+w)&&val('m'+w+'-nombre')) sesMe.push(pers('m'+w)); }
     fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({reserva:{checkin:bookingData.checkin,checkout:bookingData.checkout},titular:sesTit,acompanantes:sesAc,menores:sesMe})});
+      body:JSON.stringify({reserva:{checkin:val('r-checkin')||bookingData.checkin,checkout:val('r-checkout')||bookingData.checkout},titular:sesTit,acompanantes:sesAc,menores:sesMe})});
   }catch(e){ console.error('Error SES:',e); }
 
   // 1) Email al gestor (Resend)
