@@ -108,14 +108,14 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2
         <div class="fg"><label>Nombre <span>*</span></label><input type="text" id="t-nombre" placeholder="Tu nombre"></div>
         <div class="fg"><label>Primer apellido <span>*</span></label><input type="text" id="t-apellido1" placeholder="Primer apellido"></div>
         <div class="fg"><label>Segundo apellido</label><input type="text" id="t-apellido2" placeholder="Segundo apellido (si tiene)"></div>
-        <div class="fg"><label>Sexo <span>*</span></label>
+        <div class="fg"><label>Sexo</label>
           <select id="t-sexo"><option value="">Selecciona...</option><option value="Mujer">Mujer</option><option value="Hombre">Hombre</option></select>
         </div>
         <div class="fg"><label>Tipo de documento <span>*</span></label>
           <select id="t-tipodoc"><option value="DNI">DNI</option><option value="NIE">NIE</option><option value="Pasaporte">Pasaporte</option></select>
         </div>
         <div class="fg"><label>Nº de documento <span>*</span></label><input type="text" id="t-dni" placeholder="12345678A"></div>
-        <div class="fg"><label>Nº de soporte del documento <span>*</span></label><input type="text" id="t-soporte" placeholder="Ej. IDESP / número de soporte"><div class="hint">Obligatorio con DNI/NIE. Figura en el propio documento.</div></div>
+        <div class="fg"><label>Nº de soporte del documento</label><input type="text" id="t-soporte" placeholder="Ej. IDESP / número de soporte"><div class="hint">Solo si usas DNI o NIE. Figura en el propio documento (empieza por letras).</div></div>
         <div class="fg"><label>Fecha de nacimiento <span>*</span></label><input type="date" id="t-nacimiento"></div>
         <div class="fg"><label>Nacionalidad <span>*</span></label>
           <select id="t-nacionalidad"><option value="">Selecciona...</option><option value="Española" selected>Española</option><option value="Portuguesa">Portuguesa</option><option value="Francesa">Francesa</option><option value="Alemana">Alemana</option><option value="Italiana">Italiana</option><option value="Británica">Británica</option><option value="Otra">Otra</option></select>
@@ -133,8 +133,8 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2
     <div class="section">
       <div class="section-header"><i class="ti ti-credit-card"></i><h2>Datos del pago</h2><span class="badge">Obligatorio</span></div>
       <div class="form-grid">
-        <div class="fg"><label>Tipo de pago <span>*</span></label>
-          <select id="t-pago"><option value="Tarjeta" selected>Tarjeta</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Plataforma de pago">Plataforma de pago</option><option value="Otro">Otro</option></select>
+        <div class="fg"><label>Tipo de pago</label>
+          <select id="t-pago"><option value="Tarjeta">Tarjeta</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Plataforma de pago" selected>Plataforma de pago (Booking, Airbnb...)</option><option value="Otro">Otro</option></select>
         </div>
         <div class="fg"><label>Últimos 4 dígitos / IBAN parcial</label><input type="text" id="t-pago-id" placeholder="Ej. 1234" maxlength="24"><div class="hint">Solo si pagas con tarjeta o transferencia. No pongas el número completo.</div></div>
       </div>
@@ -237,10 +237,15 @@ function nacOptions(){return NACS.map(function(x){return '<option value="'+x+'"'
 function parentescoOptions(){return '<option value="">Selecciona...</option>'+PARENTESCOS.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('');}
 
 function goToStep2(){
-  var required=['t-nombre','t-apellido1','t-sexo','t-dni','t-soporte','t-nacimiento','t-nacionalidad','t-pais','t-telefono','t-email','t-direccion','t-cp'];
+  var required=['t-nombre','t-apellido1','t-dni','t-nacimiento','t-nacionalidad','t-pais','t-telefono','t-email','t-direccion','t-cp'];
   for(var i=0;i<required.length;i++){
     var el=document.getElementById(required[i]);
     if(!el.value.trim()){showToast('Por favor rellena todos los campos obligatorios');el.focus();return;}
+  }
+  var _td=(document.getElementById('t-tipodoc')||{}).value||'';
+  if((_td==='DNI'||_td==='NIE')&&!val('t-soporte')){
+    showToast('Con DNI o NIE necesitamos el nº de soporte del documento');
+    document.getElementById('t-soporte').focus(); return;
   }
   setStep(2);
 }
