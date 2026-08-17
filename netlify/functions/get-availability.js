@@ -1,5 +1,11 @@
 const { reservasStore, ensureFreshExternal } = require('./ical-lib');
 
+function addDaysISO(iso, n){
+  const d = new Date(String(iso) + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 exports.handler = async function(event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -14,7 +20,8 @@ exports.handler = async function(event, context) {
     try {
       const log = await store.get('partes', { type: 'json' });
       if (log && log.items) partes = log.items.filter(function(p){ return p.ok; }).map(function(p){
-        return { from: p.entrada, to: p.salida, personas: p.personas, fecha: p.fecha, lote: p.lote || '' };
+        const ultimaNoche = (p.salida && p.salida > p.entrada) ? addDaysISO(p.salida, -1) : p.entrada;
+        return { from: p.entrada, to: ultimaNoche, salida: p.salida, personas: p.personas, fecha: p.fecha, lote: p.lote || '' };
       });
     } catch(e) { console.error(e); }
 
