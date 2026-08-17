@@ -86,6 +86,34 @@ function iso3(nac){
   return NAC[s.toLowerCase()] || 'ESP';
 }
 
+const PAR = {
+  'conyuge':'CY','conyuge/pareja':'CY','pareja':'CY','esposo':'CY','esposa':'CY',
+  'hijo':'HJ','hija':'HJ','hijo/a':'HJ',
+  'padre':'PM','madre':'PM','padre/madre':'PM','padre o madre':'PM',
+  'hermano':'HR','hermana':'HR','hermano/a':'HR',
+  'abuelo':'AB','abuela':'AB','abuelo/a':'AB',
+  'tio':'TI','tia':'TI','tio/a':'TI',
+  'sobrino':'SB','sobrina':'SB','sobrino/a':'SB',
+  'nieto':'NI','nieta':'NI','nieto/a':'NI',
+  'suegro':'SG','suegra':'SG','suegro/a':'SG',
+  'cunado':'CD','cunada':'CD','cunado/a':'CD',
+  'yerno':'YN','nuera':'YN','yerno o nuera':'YN',
+  'tutor':'TU','tutora':'TU','tutor/a':'TU',
+  'otro familiar':'OT','otro':'OT','sin parentesco':'','ninguno':''
+};
+const PAR_OK = ['AB','BA','BN','CD','CY','HJ','HR','NI','OT','PM','SB','SG','TI','TU','YN'];
+
+function codParentesco(v){
+  const s = String(v||'').trim();
+  if(!s) return '';
+  const up = s.toUpperCase();
+  if(PAR_OK.indexOf(up) >= 0) return up;
+  const key = s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ').trim();
+  return PAR[key] || '';
+}
+
 function tipoDoc(num){
   const n=String(num||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(/^\d{8}[A-Z]$/.test(n)) return 'NIF';
@@ -149,7 +177,8 @@ function personaXml(p, rol, defaults){
   if(tel)x+='<telefono>'+esc(tel)+'</telefono>';
   var mail=p.email||(tel?'':defaults.email);
   if(mail)x+='<correo>'+esc(mail)+'</correo>';
-  if(p.parentesco)x+='<parentesco>'+esc(p.parentesco)+'</parentesco>';
+  var _par=codParentesco(p.parentesco);
+  if(_par)x+='<parentesco>'+_par+'</parentesco>';
   x+='</persona>';
   return x;
 }
@@ -199,7 +228,7 @@ exports.handler = async function(event){
     const defaults={direccion:titular.direccion,cp:titular.cp||'',pais:titular.pais||'ESP',telefono:titular.telefono||'',email:titular.email||''};
     const mens=(menores||[]).filter(function(m){return m&&m.nombre;});
     const tit=Object.assign({},titular);
-    if(mens.length){ tit.parentesco = mens[0].parentesco || 'PM'; }
+    if(mens.length){ tit.parentesco = codParentesco(mens[0].parentesco) || 'PM'; }
     const personas=[personaXml(tit,'TI',defaults)]
       .concat((acompanantes||[]).map(function(a){return personaXml(a,'VI',defaults);}))
       .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; return personaXml(mm,'VI',defaults); }));
