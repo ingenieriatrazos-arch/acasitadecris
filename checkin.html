@@ -124,7 +124,7 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:1rem 2
           <select id="t-pais"><option value="España" selected>España</option><option value="Portugal">Portugal</option><option value="Francia">Francia</option><option value="Alemania">Alemania</option><option value="Reino Unido">Reino Unido</option><option value="Italia">Italia</option><option value="Países Bajos">Países Bajos</option><option value="EEUU">EEUU</option><option value="Otro">Otro</option></select>
         </div>
         <div class="fg"><label>Teléfono <span>*</span></label><input type="tel" id="t-telefono" placeholder="+34 600 000 000"></div>
-        <div class="fg"><label>Email <span>*</span></label><input type="email" id="t-email" placeholder="tu@email.com"></div>
+        <div class="fg"><label>Email</label><input type="email" id="t-email" placeholder="tu@email.com"></div>
         <div class="fg"><label>Dirección <span>*</span></label><input type="text" id="t-direccion" placeholder="Calle, número, ciudad"></div>
         <div class="fg"><label>Código postal <span>*</span></label><input type="text" id="t-cp" placeholder="15930"></div>
       </div>
@@ -237,7 +237,7 @@ function nacOptions(){return NACS.map(function(x){return '<option value="'+x+'"'
 function parentescoOptions(){return '<option value="">Selecciona...</option>'+PARENTESCOS.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('');}
 
 function goToStep2(){
-  var required=['t-nombre','t-apellido1','t-dni','t-nacimiento','t-nacionalidad','t-pais','t-telefono','t-email','t-direccion','t-cp'];
+  var required=['t-nombre','t-apellido1','t-dni','t-nacimiento','t-nacionalidad','t-pais','t-telefono','t-direccion','t-cp'];
   for(var i=0;i<required.length;i++){
     var el=document.getElementById(required[i]);
     if(!el.value.trim()){showToast('Por favor rellena todos los campos obligatorios');el.focus();return;}
