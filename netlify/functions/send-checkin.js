@@ -77,11 +77,7 @@ exports.handler = async function(event) {
       ${personaHTML(titular, '👤 Titular', 'titular')}
       ${acompHTML}
       ${menoresHTML}
-      <div style="background:#fff8e8;border:1.5px solid #f5d88a;border-radius:10px;padding:14px 16px;margin-top:10px;">
-        <div style="font-size:12px;color:#6a5010;line-height:1.6;">
-          ⚠️ <strong>Recuerda:</strong> comunica estos datos en <strong>SES.HOSPEDAJES</strong> (Ministerio del Interior) dentro de las <strong>24 h</strong> siguientes al check-in. Establecimiento 15101AAV43.
-        </div>
-      </div>
+      <div style="background:#e8f8f0;border:1.5px solid #7fd0aa;border-radius:10px;padding:14px 16px;margin-top:10px;"><div style="font-size:12px;color:#0F6E56;line-height:1.6;">&#9989; <strong>Parte de viajeros:</strong> se comunica autom&aacute;ticamente a SES.Hospedajes (Ministerio del Interior). Recibir&aacute;s otro correo con el resultado y el n&uacute;mero de lote. Si ese correo no llega o indica error, comunica el parte a mano en la sede antes de 24&nbsp;h desde la llegada.</div></div>
     </div>
   </div>
 </body></html>`;
