@@ -64,6 +64,8 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 .note a{color:#1a6a8f;font-weight:700;text-decoration:none}
 #confcard{border-color:#e05a5a}
 #confcard h2{color:#e05a5a;border-bottom-color:#f5c6c6}
+#orphcard{border-color:#b07010}
+#orphcard h2{color:#b07010;border-bottom-color:#f5d88a}
 #login{max-width:300px;margin:22vh auto;text-align:center}
 #login h1{font-size:1.2rem;color:#0a2d40;margin-bottom:.3rem}
 #login p{font-size:.8rem;color:#5a8a9a;margin-bottom:1rem}
@@ -91,6 +93,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 <main>
   <div class="card" id="nextcard" style="display:none"><h2>Proxima reserva</h2><div id="nextbox" style="font-size:.88rem;line-height:1.7"></div></div>
   <div class="card" id="confcard" style="display:none"><h2>&#9888; Conflictos de fechas</h2><div id="confbox" style="font-size:.85rem;line-height:1.7"></div></div>
+  <div class="card" id="orphcard" style="display:none"><h2>&#128221; Datos de reservas anuladas</h2><div id="orphbox" style="font-size:.85rem;line-height:1.7"></div></div>
   <div class="card">
     <div class="calnav"><button onclick="mv(-1)">&#8249;</button><b id="mtitle"></b><button onclick="mv(1)">&#8250;</button></div>
     <div class="grid" id="cal"></div>
@@ -142,6 +145,8 @@ function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDat
 function addD(ds,n){var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return dstr(d);}
 function inR(ds,r){return ds>=r.from&&ds<=r.to;}
 function extOf(ds){for(var i=0;i<extB.length;i++)if(inR(ds,extB[i]))return{src:'Booking',cls:'bkg',r:extB[i]};for(var j=0;j<extA.length;j++)if(inR(ds,extA[j]))return{src:'Airbnb',cls:'abn',r:extA[j]};return null;}
+function ocupado(ds){ if(manualDays.indexOf(ds)>=0)return true; return !!extOf(ds); }
+function notasHuerfanas(){ return notes.filter(function(n){ var d=n.from,g=0; while(d<=n.to&&g++<800){ if(ocupado(d))return false; d=addD(d,1); } return true; }); }
 function notesFor(ds){return notes.filter(function(n){return inR(ds,n);});}
 function parteFor(ds){for(var i=0;i<partes.length;i++){if(ds>=partes[i].from&&ds<=partes[i].to)return partes[i];}return null;}
 function parteOver(r){for(var i=0;i<partes.length;i++){if(!(partes[i].to<r.from||partes[i].from>r.to))return partes[i];}return null;}
@@ -205,14 +210,14 @@ function render(){
       else if(selStart&&ds>selStart)cls+=' inrange';
       click=' onclick="tap(&quot;'+ds+'&quot;)"';
       if(nsrc>=2)mark='<span class="np">&#9888;</span>';
-      else if(notesFor(ds).length)mark='<span class="np">&#128221;</span>';
-      if(parteFor(ds))okd='<span class="ok" title="Check-in enviado a Hospedajes"></span>';
+      else if(nsrc>=1&&notesFor(ds).length)mark='<span class="np">&#128221;</span>';
+      if(nsrc>=1&&parteFor(ds))okd='<span class="ok" title="Check-in enviado a Hospedajes"></span>';
     }
     if(dt.getTime()===now.getTime())cls+=' today';
     g+='<div class="'+cls+'"'+click+'>'+dd+mark+okd+'</div>';
   }
   document.getElementById('cal').innerHTML=g;
-  hint(); renderList(); renderNext(); renderConf();
+  hint(); renderList(); renderNext(); renderConf(); renderOrph();
 }
 function notesOver(r){return notes.filter(function(n){return !(n.to<r.from||n.from>r.to);});}
 function renderList(){
@@ -257,6 +262,23 @@ function renderNext(){
     h+='<div>&#128197; Proxima entrada: '+label(next)+' <span style="color:#5a8a9a">(en '+dias+' dia'+(dias===1?'':'s')+')</span></div>';}
   box.innerHTML=h||'<div>Sin reservas proximas</div>';
   card.style.display='block';
+}
+function renderOrph(){
+  var card=document.getElementById('orphcard'),box=document.getElementById('orphbox');
+  if(!card)return;
+  var h=notasHuerfanas();
+  if(!h.length){card.style.display='none';return;}
+  box.innerHTML=h.map(function(n){ return '<div>&#128221; '+fmt(n.from)+' &rarr; '+fmt(n.to)+': <b>'+esc(n.note)+'</b>'+(n.phone?' &middot; '+esc(n.phone):'')+'</div>'; }).join('')
+    +'<div style="font-size:.72rem;color:#5a8a9a;margin:.5rem 0 .2rem">Estas fechas ya no tienen ninguna reserva (se anularon o se liberaron), pero conservan los datos del cliente. En el calendario ya figuran como libres.</div>'
+    +'<div class="btns"><button class="btn red" onclick="limpiarOrph()">Borrar estos datos</button></div>';
+  card.style.display='block';
+}
+function limpiarOrph(){
+  var h=notasHuerfanas();
+  if(!h.length)return;
+  if(!confirm('Borrar los datos de '+h.length+' reserva(s) sin fechas ocupadas? No se puede deshacer.'))return;
+  notes=notes.filter(function(n){return h.indexOf(n)<0;});
+  save();
 }
 function renderConf(){
   var bD=expand(extB),aD=expand(extA),all={};
@@ -318,7 +340,9 @@ function waSend(i){
 }
 function callPhone(i){var n=notes[i];if(n&&n.phone)location.href='tel:+'+cleanPhone(n.phone);}
 function tap(ds){
-  var ex=extOf(ds), man=manualDays.indexOf(ds)>=0, ns=notesFor(ds), pt=parteFor(ds);
+  var ex=extOf(ds), man=manualDays.indexOf(ds)>=0;
+  var libre=!ex&&!man;
+  var ns=libre?[]:notesFor(ds), pt=libre?null:parteFor(ds);
   if(selStart){
     if(ds<selStart){selStart=ds;render();return;}
     var a=selStart,b=ds;
@@ -351,7 +375,7 @@ function tap(ds){
     if(_rr)h+='<button class="btn amber" onclick="editData(&quot;'+_rr.from+'&quot;,&quot;'+_rr.to+'&quot;,&quot;Manual&quot;)">&#9998; Nombre y telefono</button>';
   }
   if(man)h+='<button class="btn red" onclick="unblockDay(&quot;'+ds+'&quot;)">Desbloquear dia</button>';
-  if(!ex&&!man){
+  if(libre){
     h+='<button class="btn red" onclick="blockDay(&quot;'+ds+'&quot;)">Bloquear solo este dia</button>';
     h+='<button class="btn blue" style="width:auto;flex:1" onclick="startRange(&quot;'+ds+'&quot;)">Inicio de periodo</button>';}
   h+='<button class="btn gray" onclick="closeSheet()">Cerrar</button></div>';
