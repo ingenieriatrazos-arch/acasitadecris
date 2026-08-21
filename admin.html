@@ -93,7 +93,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 <main>
   <div class="card" id="nextcard" style="display:none"><h2>Proxima reserva</h2><div id="nextbox" style="font-size:.88rem;line-height:1.7"></div></div>
   <div class="card" id="confcard" style="display:none"><h2>&#9888; Conflictos de fechas</h2><div id="confbox" style="font-size:.85rem;line-height:1.7"></div></div>
-  <div class="card" id="parcard" style="display:none;border-color:#e05a5a"><h2 style="color:#e05a5a;border-bottom-color:#f5c6c6">&#9888; Partes rechazados por Interior</h2><div id="parbox" style="font-size:.85rem;line-height:1.6"></div></div>
+  <div class="card" id="parcard" style="display:none;border-color:#e05a5a"><h2 style="color:#e05a5a;border-bottom-color:#f5c6c6">&#128203; Partes de viajeros</h2><div id="parbox" style="font-size:.85rem;line-height:1.6"></div></div>
   <div class="card" id="orphcard" style="display:none"><h2>&#128221; Datos de reservas anuladas</h2><div id="orphbox" style="font-size:.85rem;line-height:1.7"></div></div>
   <div class="card">
     <div class="calnav"><button onclick="mv(-1)">&#8249;</button><b id="mtitle"></b><button onclick="mv(1)">&#8250;</button></div>
@@ -317,22 +317,25 @@ async function partesLoad(){
 function renderPartes(){
   var card=document.getElementById('parcard'),box=document.getElementById('parbox');
   if(!card)return;
-  var mal={};
+  var st={};
   partesLog.forEach(function(p){
     var k=(p.entrada||'')+'_'+(p.salida||'');
     if(!k||k==='_')return;
-    if(p.ok)delete mal[k]; else mal[k]=p;
+    st[k]=p;
   });
-  var ks=Object.keys(mal);
+  var ks=Object.keys(st).sort();
   if(!ks.length){card.style.display='none';return;}
-  box.innerHTML=ks.map(function(k){var p=mal[k];
-    return '<div style="margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #f5e0e0">'
-      +'<b>'+fmtx(p.entrada)+' &rarr; '+fmtx(p.salida)+'</b><br>'
-      +'<span style="color:#a04040;font-size:.78rem">'+esc(p.desc||p.cod||'Rechazado por Hospedajes')+'</span><br>'
-      +'<button class="btn amber" style="width:auto;flex:0;padding:.45rem .9rem;margin-top:.4rem" onclick="parteFix(&quot;'+k+'&quot;)">Corregir y reenviar</button>'
+  ks=ks.slice(-6).reverse();
+  box.innerHTML=ks.map(function(k){var p=st[k];
+    var bien=!!p.ok;
+    return '<div style="margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #eef2f5">'
+      +'<b>'+fmtx(p.entrada)+' &rarr; '+fmtx(p.salida)+'</b> '
+      +(bien?'<span style="color:#2a7a52;font-size:.75rem;font-weight:700">ENVIADO'+(p.lote?' &middot; lote '+esc(String(p.lote).slice(0,8)):'')+'</span>':'<span style="color:#a04040;font-size:.75rem;font-weight:700">RECHAZADO</span>')
+      +(bien?'':'<br><span style="color:#a04040;font-size:.78rem">'+esc(p.desc||p.cod||'')+'</span>')
+      +'<br><button class="btn amber" style="width:auto;flex:0;padding:.4rem .8rem;margin-top:.4rem;font-size:.75rem" onclick="parteFix(&quot;'+k+'&quot;)">Corregir y reenviar</button>'
       +'</div>';
   }).join('')
-  +'<div style="font-size:.72rem;color:#5a8a9a">Estos partes NO constan presentados. Corrige el dato que falla y reenvialos.</div>';
+  +'<div style="font-size:.72rem;color:#5a8a9a">Ojo: <b>ENVIADO</b> solo significa que Hospedajes recibio el fichero. Si despues te llega un correo de error, el parte NO cuenta como presentado: corrige el dato aqui y reenvialo.</div>';
   card.style.display='block';
 }
 async function parteFix(k){
