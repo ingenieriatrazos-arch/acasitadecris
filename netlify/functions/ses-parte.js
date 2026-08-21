@@ -156,7 +156,35 @@ function esMenor(nac, refIso){
   return edad<18;
 }
 
-function muniXml(p,d){var m=String((p&&p.municipio)||(d&&d.municipio)||'').trim();return m?('<nombreMunicipio>'+esc(m)+'</nombreMunicipio>'):'';}
+var MUNI=null;
+try{ MUNI=require('./municipios-ine'); }catch(e){ MUNI={N:{},CP:{}}; }
+function normMuni(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+function ineMunicipio(nombre,cp){
+  var n=normMuni(nombre);
+  if(n&&MUNI.N[n])return MUNI.N[n];
+  var c=String(cp||'').replace(/[^0-9]/g,'');
+  if(c.length===4)c='0'+c;
+  var l=MUNI.CP[c];
+  if(l&&l.length===1)return l[0];
+  if(l&&l.length>1&&n){
+    for(var i=0;i<l.length;i++){ for(var k in MUNI.N){ if(MUNI.N[k]===l[i]&&(k===n||k.indexOf(n)===0||n.indexOf(k)===0))return l[i]; } }
+    return l[0];
+  }
+  if(l&&l.length)return l[0];
+  if(n){ for(var k2 in MUNI.N){ if(k2.indexOf(n)===0||n.indexOf(k2)===0)return MUNI.N[k2]; } }
+  return '';
+}
+function muniXml(p,d){
+  var nom=String((p&&p.municipio)||(d&&d.municipio)||'').trim();
+  var cp=String((p&&p.cp)||(d&&d.cp)||'').trim();
+  var pais3='';
+  try{ pais3=iso3((p&&p.pais)||(d&&d.pais)||'ESP'); }catch(e){ pais3='ESP'; }
+  if(pais3==='ESP'){
+    var cod=ineMunicipio(nom,cp);
+    if(cod)return '<codigoMunicipio>'+cod+'</codigoMunicipio>'+(nom?'<nombreMunicipio>'+esc(nom)+'</nombreMunicipio>':'');
+  }
+  return nom?('<nombreMunicipio>'+esc(nom)+'</nombreMunicipio>'):'';
+}
 function personaXml(p, rol, defaults){
   const doc=String(p.dni||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const tdRaw=String(p.tipoDoc||'').toUpperCase();
