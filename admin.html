@@ -149,7 +149,7 @@ function cfg(){var c={};for(var k in CFG_DEF)c[k]=CFG_DEF[k];
   try{var s=JSON.parse(localStorage.getItem('wacfg')||'{}');for(var j in s)if(s[j]!==undefined&&s[j]!=='')c[j]=s[j];}catch(e){}
   return c;}
 var MSG_DEF=[
- {id:'conf',t:'Confirmar reserva + check-in',ico:'\u2705',x:'Hola {nombre}, soy Roberto de A Casi\u00f1a de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}: entrada a partir de las 16:00 y salida antes de las 12:00.\n\nAntes de llegar ten\u00e9is que completar el check-in online. Es obligatorio por ley y hay que registrar a todos los viajeros, tambi\u00e9n a los menores (necesit\u00e1is el DNI o pasaporte de cada uno). Se hace en 2 minutos desde el m\u00f3vil:\n{checkin}\n\nEn cuanto lo teng\u00e1is hecho os mando el v\u00eddeo de c\u00f3mo abrir el cajet\u00edn de la llave, la ubicaci\u00f3n exacta y una gu\u00eda de la zona. \u00a1Gracias!'},
+ {id:'conf',t:'Confirmar reserva + check-in',ico:'\u2705',x:'Hola {nombre}, soy Roberto de A Casi\u00f1a de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}, {noches} noches: entrada el {desde} a partir de las 16:00 y salida el {hasta} antes de las 12:00.\n\nAntes de llegar ten\u00e9is que completar el check-in online. Es obligatorio por ley y hay que registrar a todos los viajeros, tambi\u00e9n a los menores (necesit\u00e1is el DNI o pasaporte de cada uno). Se hace en 2 minutos desde el m\u00f3vil:\n{checkin}\n\nEn cuanto lo teng\u00e1is hecho os mando el v\u00eddeo de c\u00f3mo abrir el cajet\u00edn de la llave, la ubicaci\u00f3n exacta y una gu\u00eda de la zona. \u00a1Gracias!'},
  {id:'pack',t:'Acceso completo (tras el check-in)',ico:'\uD83D\uDD13',x:'Hola {nombre}, ya ten\u00e9is el check-in hecho, as\u00ed que os paso todo lo del acceso:\n\n\uD83D\uDD11 La llave est\u00e1 en el cajet\u00edn de la puerta y el c\u00f3digo es {codigo}. Aqu\u00ed ten\u00e9is el v\u00eddeo de c\u00f3mo se abre:\n{video}\n\n\uD83D\uDCCD Ubicaci\u00f3n exacta de la casa:\n{mapa}\n\n\uD83C\uDFD6 Y una gu\u00eda con las playas y los sitios que merecen la pena cerca:\n{guia}\n\nLa clave del wifi est\u00e1 apuntada detr\u00e1s del router. Pod\u00e9is entrar a partir de las 16:00. \u00a1Buen viaje!'},
  {id:'llave',t:'Solo la llave',ico:'\uD83D\uDD11',x:'Hola {nombre}, os paso c\u00f3mo entrar. La llave est\u00e1 dentro del cajet\u00edn que hay en la puerta y el c\u00f3digo es {codigo}. Aqu\u00ed ten\u00e9is un v\u00eddeo corto de c\u00f3mo se abre:\n{video}\n\nLa clave del wifi la ten\u00e9is apuntada en la parte de atr\u00e1s del router. Pod\u00e9is entrar a partir de las 16:00.'},
  {id:'ubi',t:'Solo la ubicaci\u00f3n',ico:'\uD83D\uDCCD',x:'Hola {nombre}, esta es la ubicaci\u00f3n exacta de la casa:\n{mapa}\n\nDirecci\u00f3n: Lugar de C\u00e9sar 41B, Boiro (A Coru\u00f1a). Hay sitio para aparcar en la propia casa.'},
@@ -353,7 +353,14 @@ function sheet(html){document.getElementById('sheet').innerHTML=html;document.ge
 function waMsg(n,id){
   var c=cfg(), nombre=(n.note||'').split(',')[0].trim()||'';
   var t=msgText(id);
-  t=t.split('{nombre}').join(nombre).split('{desde}').join(fmt(n.from)).split('{hasta}').join(fmt(n.to));
+  var salida=addD(n.to,1);
+  var noches=0,dd=n.from,gg=0; while(dd<=n.to&&gg++<800){noches++;dd=addD(dd,1);}
+  t=t.split('{nombre}').join(nombre)
+   .split('{desde}').join(fmt(n.from))
+   .split('{hasta}').join(fmt(salida))
+   .split('{salida}').join(fmt(salida))
+   .split('{ultima}').join(fmt(n.to))
+   .split('{noches}').join(String(noches));
   for(var k in c)t=t.split('{'+k+'}').join(c[k]);
   return t;
 }
@@ -370,7 +377,7 @@ function waOpen(phone,msg){
 }
 function waSend(i){
   var n=notes[i]; if(!n||!n.phone){toast('Esa reserva no tiene telefono');return;}
-  var h='<h3>Enviar WhatsApp</h3><p style="color:#5a8a9a;font-size:.8rem">'+esc(n.note||'')+' &middot; '+esc(n.phone)+' &middot; '+fmt(n.from)+' &rarr; '+fmt(n.to)+'</p>';
+  var h='<h3>Enviar WhatsApp</h3><p style="color:#5a8a9a;font-size:.8rem">'+esc(n.note||'')+' &middot; '+esc(n.phone)+'<br>Entran el '+fmt(n.from)+' y se van el '+fmt(addD(n.to,1))+'</p>';
   h+='<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem">';
   MSG_DEF.forEach(function(m){
     h+='<button class="btn wa" style="width:100%;text-align:left;padding:.7rem .9rem" onclick="waPick('+i+',&quot;'+m.id+'&quot;)">'+m.ico+' '+m.t+'</button>';
@@ -390,7 +397,7 @@ function waPick(i,id){
 }
 function cfgSheet(){
   var c=cfg();
-  var h='<h3>Mensajes de WhatsApp y enlaces</h3><p style="font-size:.78rem;color:#5a8a9a">Los enlaces se insertan solos en los mensajes. Puedes usar {nombre}, {desde}, {hasta}, {codigo}, {checkin}, {video}, {mapa} y {guia}.</p>';
+  var h='<h3>Mensajes de WhatsApp y enlaces</h3><p style="font-size:.78rem;color:#5a8a9a">Los enlaces se insertan solos en los mensajes. Comodines: {nombre}, {desde} (entrada), {hasta} (dia que se van), {noches}, {ultima} (ultima noche), {codigo}, {checkin}, {video}, {mapa} y {guia}.</p>';
   for(var k in CFG_DEF){
     h+='<div class="fg"><label>'+CFG_LBL[k]+'</label><input id="cf-'+k+'" type="text" value="'+String(c[k]||'').replace(/"/g,'&quot;')+'"'+(k==='video'?' placeholder="Pega aqui el enlace del video"':'')+'></div>';
   }
