@@ -7,7 +7,16 @@ exports.handler = async function (event) {
 
   let store;
   try { store = getStore({ name: 'media', consistency: 'strong' }); }
-  catch (e) { return { statusCode: 500, headers: cors, body: 'store: ' + e.message }; }
+  catch (e) {
+    try {
+      store = getStore({
+        name: 'media',
+        siteID: 'd74f1b1b-aa23-4d68-b9c3-151e6eb458f9',
+        token: process.env.NETLIFY_TOKEN,
+        consistency: 'strong'
+      });
+    } catch (e2) { return { statusCode: 500, headers: cors, body: 'store: ' + e2.message }; }
+  }
 
   const qs = event.queryStringParameters || {};
   const name = (qs.name || 'llave').replace(/[^a-z0-9_-]/gi, '');
