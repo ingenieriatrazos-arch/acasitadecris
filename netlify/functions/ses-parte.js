@@ -291,8 +291,9 @@ exports.handler = async function(event){
     const mens=(menores||[]).filter(function(m){return m&&m.nombre;});
     const tit=Object.assign({},titular);
     if(mens.length){ tit.parentesco = codParentesco(mens[0].parentesco) || 'PM'; }
+    if(!mens.length)delete tit.parentesco;
     const personas=[personaXml(tit,'TI',defaults)]
-      .concat((acompanantes||[]).map(function(a){return personaXml(a,'VI',defaults);}))
+      .concat((acompanantes||[]).map(function(a){ var aa=Object.assign({},a); if(!mens.length)delete aa.parentesco; return personaXml(aa,'VI',defaults); }))
       .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; return personaXml(mm,'VI',defaults); }));
     const nPers=1+(acompanantes||[]).length+mens.length;
     const ref='WEB-'+ci.replace(/-/g,'')+'-'+Date.now().toString(36).toUpperCase();
