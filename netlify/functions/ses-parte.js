@@ -156,6 +156,7 @@ function esMenor(nac, refIso){
   return edad<18;
 }
 
+function muniXml(p,d){var m=String((p&&p.municipio)||(d&&d.municipio)||'').trim();return m?('<nombreMunicipio>'+esc(m)+'</nombreMunicipio>'):'';}
 function personaXml(p, rol, defaults){
   const doc=String(p.dni||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const tdRaw=String(p.tipoDoc||'').toUpperCase();
@@ -172,7 +173,7 @@ function personaXml(p, rol, defaults){
   x+='<nacionalidad>'+iso3(p.nacionalidad)+'</nacionalidad>';
   var sx=String(p.sexo||'').toUpperCase();
   if(sx==='H'||sx==='M'||sx==='O')x+='<sexo>'+sx+'</sexo>';
-  x+='<direccion><direccion>'+esc(p.direccion||defaults.direccion)+'</direccion><codigoPostal>'+esc(p.cp||defaults.cp)+'</codigoPostal><pais>'+iso3(p.pais||defaults.pais)+'</pais></direccion>';
+  x+='<direccion><direccion>'+esc(p.direccion||defaults.direccion)+'</direccion>'+muniXml(p,defaults)+'<codigoPostal>'+esc(p.cp||defaults.cp)+'</codigoPostal><pais>'+iso3(p.pais||defaults.pais)+'</pais></direccion>';
   var tel=p.telefono||defaults.telefono;
   if(tel)x+='<telefono>'+esc(tel)+'</telefono>';
   var mail=p.email||(tel?'':defaults.email);
@@ -225,7 +226,7 @@ exports.handler = async function(event){
     if(!ci||!co)return{statusCode:400,headers,body:JSON.stringify({error:'Fechas de reserva no validas'})};
     if(!titular||!titular.nombre)return{statusCode:400,headers,body:JSON.stringify({error:'Falta titular'})};
 
-    const defaults={direccion:titular.direccion,cp:titular.cp||'',pais:titular.pais||'ESP',telefono:titular.telefono||'',email:titular.email||''};
+    const defaults={direccion:titular.direccion,cp:titular.cp||'',pais:titular.pais||'ESP',municipio:titular.municipio||'',telefono:titular.telefono||'',email:titular.email||''};
     const mens=(menores||[]).filter(function(m){return m&&m.nombre;});
     const tit=Object.assign({},titular);
     if(mens.length){ tit.parentesco = codParentesco(mens[0].parentesco) || 'PM'; }
