@@ -364,8 +364,18 @@ function waMsg(n,id){
   for(var k in c)t=t.split('{'+k+'}').join(c[k]);
   return t;
 }
+function esMovil(){
+  var ua=navigator.userAgent||'';
+  if(/Android|iPhone|iPad|iPod|Windows Phone/i.test(ua))return true;
+  if(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)return true;
+  return false;
+}
 function waOpen(phone,msg){
   var p=cleanPhone(phone), q='phone='+p+'&text='+encodeURIComponent(msg);
+  if(!esMovil()){
+    window.open('https://web.whatsapp.com/send?'+q,'_blank');
+    return;
+  }
   var web='https://api.whatsapp.com/send?'+q;
   var fired=false;
   var fb=setTimeout(function(){ if(!fired&&!document.hidden){ location.href=web; } },1400);
@@ -375,12 +385,18 @@ function waOpen(phone,msg){
   document.addEventListener('visibilitychange',function(){if(document.hidden)stop();},{once:true});
   location.href='whatsapp://send?'+q;
 }
+async function waCopy(i,id){
+  var n=notes[i]; if(!n)return;
+  var msg=waMsg(n,id);
+  try{ await navigator.clipboard.writeText(msg); toast('Mensaje copiado'); }
+  catch(e){ prompt('Copia el mensaje:',msg); }
+}
 function waSend(i){
   var n=notes[i]; if(!n||!n.phone){toast('Esa reserva no tiene telefono');return;}
   var h='<h3>Enviar WhatsApp</h3><p style="color:#5a8a9a;font-size:.8rem">'+esc(n.note||'')+' &middot; '+esc(n.phone)+'<br>Entran el '+fmt(n.from)+' y se van el '+fmt(addD(n.to,1))+'</p>';
   h+='<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem">';
   MSG_DEF.forEach(function(m){
-    h+='<button class="btn wa" style="width:100%;text-align:left;padding:.7rem .9rem" onclick="waPick('+i+',&quot;'+m.id+'&quot;)">'+m.ico+' '+m.t+'</button>';
+    h+='<div style="display:flex;gap:.4rem">'+'<button class="btn wa" style="flex:1;text-align:left;padding:.7rem .9rem" onclick="waPick('+i+',&quot;'+m.id+'&quot;)">'+m.ico+' '+m.t+'</button>'+'<button class="btn gray" style="flex:0 0 3rem;min-width:3rem" title="Copiar el texto" onclick="waCopy('+i+',&quot;'+m.id+'&quot;)">&#128203;</button>'+'</div>';
   });
   h+='</div>';
   h+='<div class="btns"><button class="btn gray" onclick="closeSheet()">Cerrar</button></div>';
@@ -391,7 +407,8 @@ function waPick(i,id){
   var c=cfg(), t=msgText(id);
   if(t.indexOf('{video}')>=0&&!c.video){ alert('Todavia no has puesto el enlace del video del cajetin.\n\nAbre "Mensajes de WhatsApp y enlaces" y pegalo ahi.'); return; }
   var msg=waMsg(n,id);
-  if(!confirm('Enviar a '+(n.note||n.phone)+':\n\n'+msg+'\n\nSe abrira WhatsApp con el mensaje escrito; solo tendras que pulsar enviar.'))return;
+  var donde=esMovil()?'Se abrira WhatsApp con el mensaje escrito; solo tendras que pulsar enviar.':'Se abrira WhatsApp Web en otra pestana con el mensaje escrito.';
+  if(!confirm('Enviar a '+(n.note||n.phone)+':\n\n'+msg+'\n\n'+donde))return;
   closeSheet();
   waOpen(n.phone,msg);
 }
