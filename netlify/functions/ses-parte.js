@@ -221,6 +221,31 @@ exports.handler = async function(event){
       return{statusCode:200,headers,body:JSON.stringify({status:r.status,respuesta:r.text.slice(0,4000)})};
     }
 
+    const _b=JSON.parse(event.body||'{}');
+    if(_b.op){
+      if(_b.password!==process.env.ADMIN_PASSWORD)return{statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+      const _st=reservasStore();
+      if(_b.op==='list'){
+        const lg=await _st.get('partes',{type:'json'})||{items:[]};
+        return{statusCode:200,headers,body:JSON.stringify({ok:true,items:lg.items||[]})};
+      }
+      if(_b.op==='datos'){
+        const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
+        return{statusCode:200,headers,body:JSON.stringify({ok:true,data:d||null})};
+      }
+      if(_b.op==='reenviar'){
+        const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
+        if(!d)return{statusCode:404,headers,body:JSON.stringify({error:'No hay datos guardados de ese parte'})};
+        const fx=_b.fix||{};
+        const t2=Object.assign({},d.titular||{},fx);
+        const ac=(d.acompanantes||[]).map(function(a){return Object.assign({},a,fx.municipio?{municipio:fx.municipio}:{});});
+        const mn=(d.menores||[]).map(function(a){return Object.assign({},a,fx.municipio?{municipio:fx.municipio}:{});});
+        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:ac,menores:mn});
+        return await exports.handler({httpMethod:'POST',body:b2,headers:{}});
+      }
+      return{statusCode:400,headers,body:JSON.stringify({error:'Operacion desconocida'})};
+    }
+
     const {reserva,titular,acompanantes,menores}=JSON.parse(event.body);
     const ci=parseFecha(reserva&&reserva.checkin), co=parseFecha(reserva&&reserva.checkout);
     if(!ci||!co)return{statusCode:400,headers,body:JSON.stringify({error:'Fechas de reserva no validas'})};
@@ -261,6 +286,11 @@ exports.handler = async function(event){
       const log=await store.get('partes',{type:'json'})||{items:[]};
       log.items.push({fecha:new Date().toISOString(),ref:ref,entrada:ci,salida:co,personas:nPers,ok:ok,codigo:codigo,desc:desc,lote:lote,http:r.status});
       await store.setJSON('partes',log);
+      await store.setJSON('parte-datos-'+ci+'_'+co,{
+        reserva:{checkin:ci,checkout:co},
+        titular:titular,acompanantes:acompanantes||[],menores:menores||[],
+        ok:ok,lote:lote,desc:desc,fecha:new Date().toISOString()
+      });
     }catch(e){console.error(e);}
 
     const subj=ok?('Parte de viajeros comunicado a Interior: '+fmtES(ci)+' ('+nPers+' pers.)')
