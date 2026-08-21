@@ -93,6 +93,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
 <main>
   <div class="card" id="nextcard" style="display:none"><h2>Proxima reserva</h2><div id="nextbox" style="font-size:.88rem;line-height:1.7"></div></div>
   <div class="card" id="confcard" style="display:none"><h2>&#9888; Conflictos de fechas</h2><div id="confbox" style="font-size:.85rem;line-height:1.7"></div></div>
+  <div class="card" id="parcard" style="display:none;border-color:#e05a5a"><h2 style="color:#e05a5a;border-bottom-color:#f5c6c6">&#9888; Partes rechazados por Interior</h2><div id="parbox" style="font-size:.85rem;line-height:1.6"></div></div>
   <div class="card" id="orphcard" style="display:none"><h2>&#128221; Datos de reservas anuladas</h2><div id="orphbox" style="font-size:.85rem;line-height:1.7"></div></div>
   <div class="card">
     <div class="calnav"><button onclick="mv(-1)">&#8249;</button><b id="mtitle"></b><button onclick="mv(1)">&#8250;</button></div>
@@ -218,6 +219,7 @@ async function load(){
   partes=d.partes||[];
   await cfgLoad();
   render();
+  partesLoad();
 }
 async function save(){
   var r=null; try{r=await api({password:pwd,busyRanges:group(manualDays),notes:notes});}catch(e){}
@@ -302,6 +304,70 @@ function renderNext(){
     h+='<div>&#128197; Proxima entrada: '+label(next)+' <span style="color:#5a8a9a">(en '+dias+' dia'+(dias===1?'':'s')+')</span></div>';}
   box.innerHTML=h||'<div>Sin reservas proximas</div>';
   card.style.display='block';
+}
+var partesLog=[];
+function fmtx(d){return d?fmt(d):'?';}
+async function partesLoad(){
+  try{
+    var r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'list',password:pwd})});
+    if(r&&r.ok){var j=await r.json(); partesLog=j.items||[];}
+  }catch(e){}
+  renderPartes();
+}
+function renderPartes(){
+  var card=document.getElementById('parcard'),box=document.getElementById('parbox');
+  if(!card)return;
+  var mal={};
+  partesLog.forEach(function(p){
+    var k=(p.entrada||'')+'_'+(p.salida||'');
+    if(!k||k==='_')return;
+    if(p.ok)delete mal[k]; else mal[k]=p;
+  });
+  var ks=Object.keys(mal);
+  if(!ks.length){card.style.display='none';return;}
+  box.innerHTML=ks.map(function(k){var p=mal[k];
+    return '<div style="margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #f5e0e0">'
+      +'<b>'+fmtx(p.entrada)+' &rarr; '+fmtx(p.salida)+'</b><br>'
+      +'<span style="color:#a04040;font-size:.78rem">'+esc(p.desc||p.cod||'Rechazado por Hospedajes')+'</span><br>'
+      +'<button class="btn amber" style="width:auto;flex:0;padding:.45rem .9rem;margin-top:.4rem" onclick="parteFix(&quot;'+k+'&quot;)">Corregir y reenviar</button>'
+      +'</div>';
+  }).join('')
+  +'<div style="font-size:.72rem;color:#5a8a9a">Estos partes NO constan presentados. Corrige el dato que falla y reenvialos.</div>';
+  card.style.display='block';
+}
+async function parteFix(k){
+  toast('Cargando datos...');
+  var d=null;
+  try{
+    var r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'datos',password:pwd,key:k})});
+    if(r&&r.ok){var j=await r.json(); d=j.data;}
+  }catch(e){}
+  if(!d){alert('No hay datos guardados de ese parte. Se guardan a partir de ahora, asi que este habra que rehacerlo desde el formulario de check-in.');return;}
+  var ti=d.titular||{};
+  var h='<h3>Corregir y reenviar parte</h3>';
+  h+='<p style="font-size:.8rem;color:#5a8a9a">'+esc(ti.nombreCompleto||ti.nombre||'')+' &middot; '+fmtx(d.reserva&&d.reserva.checkin)+' &rarr; '+fmtx(d.reserva&&d.reserva.checkout)+'</p>';
+  h+='<p style="font-size:.78rem;color:#a04040">'+esc(d.desc||'')+'</p>';
+  h+='<div class="fg"><label>Direccion</label><input id="px-dir" type="text" value="'+String(ti.direccion||'').replace(/"/g,'&quot;')+'"></div>';
+  h+='<div class="fg"><label>Municipio</label><input id="px-mun" type="text" value="'+String(ti.municipio||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Boiro"></div>';
+  h+='<div class="fg"><label>Codigo postal</label><input id="px-cp" type="text" value="'+String(ti.cp||'').replace(/"/g,'&quot;')+'"></div>';
+  h+='<div class="btns"><button class="btn green" id="px-btn" onclick="parteSend(&quot;'+k+'&quot;)">Reenviar a Interior</button><button class="btn gray" onclick="closeSheet()">Cancelar</button></div>';
+  sheet(h);
+}
+async function parteSend(k){
+  var b=document.getElementById('px-btn'); if(b){b.disabled=true;b.textContent='Enviando...';}
+  var fix={
+    direccion:document.getElementById('px-dir').value.trim(),
+    municipio:document.getElementById('px-mun').value.trim(),
+    cp:document.getElementById('px-cp').value.trim()
+  };
+  var r=null,txt='';
+  try{
+    r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'reenviar',password:pwd,key:k,fix:fix})});
+    txt=await r.text();
+  }catch(e){ txt=e.message; }
+  var okk=false; try{ var j=JSON.parse(txt); okk=!!(j.ok||j.lote); }catch(e){}
+  if(r&&r.ok&&okk){ alert('Parte reenviado correctamente.'); closeSheet(); await partesLoad(); }
+  else { alert('Sigue fallando:\n\n'+txt.slice(0,300)); if(b){b.disabled=false;b.textContent='Reenviar a Interior';} }
 }
 function renderOrph(){
   var card=document.getElementById('orphcard'),box=document.getElementById('orphbox');
