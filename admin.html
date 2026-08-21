@@ -140,7 +140,7 @@ var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','sept
 var CFG_DEF={
   codigo:'260000',
   checkin:'https://acasitadecris.com/checkin.html',
-  video:'',
+  video:'https://acasitadecris.com/llave.html',
   mapa:'https://www.google.com/maps?q=42.617371,-8.876263',
   guia:'https://acasitadecris.com/guia.html'
 };
@@ -156,10 +156,29 @@ var MSG_DEF=[
  {id:'guia',t:'Solo la gu\u00eda de la zona',ico:'\uD83C\uDFD6',x:'Hola {nombre}, os dejo una gu\u00eda con las playas y los sitios que merecen la pena por aqu\u00ed cerca, con los tiempos en coche desde la casa:\n{guia}\n\nSi quer\u00e9is algo m\u00e1s concreto (d\u00f3nde comer, rutas, mareas) preguntadme sin problema.'},
  {id:'recuerda',t:'Recordar el check-in',ico:'\u23F0',x:'Hola {nombre}, un recordatorio: todav\u00eda no me consta vuestro check-in online y lo necesito antes de que lleg\u00e9is para poder registrar la entrada. Son 2 minutos:\n{checkin}\n\nEn cuanto lo teng\u00e1is os mando el v\u00eddeo del cajet\u00edn de la llave y la ubicaci\u00f3n. Gracias!'}
 ];
+async function cfgLoad(){
+  try{
+    var r=await fetch('/.netlify/functions/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd,op:'cfg-get'})});
+    if(!r||!r.ok)return;
+    var j=await r.json();
+    if(!j||!j.data)return;
+    if(j.data.cfg)localStorage.setItem('wacfg',JSON.stringify(j.data.cfg));
+    if(j.data.msgs)localStorage.setItem('wamsgs',JSON.stringify(j.data.msgs));
+  }catch(e){}
+}
+async function cfgPush(){
+  var c={},m={};
+  try{c=JSON.parse(localStorage.getItem('wacfg')||'{}');}catch(e){}
+  try{m=JSON.parse(localStorage.getItem('wamsgs')||'{}');}catch(e){}
+  try{
+    var r=await fetch('/.netlify/functions/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd,op:'cfg-set',cfg:c,msgs:m})});
+    return !!(r&&r.ok);
+  }catch(e){ return false; }
+}
 function msgTexts(){var o={};try{o=JSON.parse(localStorage.getItem('wamsgs')||'{}');}catch(e){}return o;}
 function msgText(id){var o=msgTexts();if(o[id])return o[id];for(var i=0;i<MSG_DEF.length;i++)if(MSG_DEF[i].id===id)return MSG_DEF[i].x;return '';}
 function msgSet(id,v){var o=msgTexts();o[id]=v;try{localStorage.setItem('wamsgs',JSON.stringify(o));}catch(e){}}
-function msgReset(){try{localStorage.removeItem('wamsgs');localStorage.removeItem('watpl');}catch(e){}toast('Textos restaurados');}
+function msgReset(){try{localStorage.removeItem('wamsgs');localStorage.removeItem('watpl');}catch(e){}cfgPush();toast('Textos restaurados');}
 function pad(n){return (n<10?'0':'')+n;}
 function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function addD(ds,n){var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return dstr(d);}
@@ -197,6 +216,7 @@ async function load(){
   extA=(d.external&&d.external.airbnb)||[];
   notes=d.notes||[];
   partes=d.partes||[];
+  await cfgLoad();
   render();
 }
 async function save(){
@@ -444,17 +464,23 @@ async function subirVideo(){
         alert('No se pudo subir el video.'+(det?'\n\n'+det:'')); prog('Subir a la web'); if(btn)btn.disabled=false; return; }
     }
     var vi=document.getElementById('cf-video'); if(vi)vi.value='https://acasitadecris.com/llave.html';
+    var c={}; try{c=JSON.parse(localStorage.getItem('wacfg')||'{}');}catch(e){}
+    c.video='https://acasitadecris.com/llave.html';
+    try{localStorage.setItem('wacfg',JSON.stringify(c));}catch(e){}
+    await cfgPush();
     prog('Subido correctamente');
-    toast('Video subido. Pulsa Guardar.');
+    toast('Video subido y disponible en todos tus dispositivos');
   }catch(e){ alert('Error: '+e.message); prog('Subir a la web'); }
   if(btn)btn.disabled=false;
 }
-function cfgSave(){
+async function cfgSave(){
   var c={};
   for(var k in CFG_DEF){var e=document.getElementById('cf-'+k);c[k]=e?e.value.trim():CFG_DEF[k];}
   try{localStorage.setItem('wacfg',JSON.stringify(c));}catch(e){}
   MSG_DEF.forEach(function(m){var e=document.getElementById('mt-'+m.id);if(e)msgSet(m.id,e.value);});
-  closeSheet(); toast('Guardado');
+  closeSheet();
+  var ok=await cfgPush();
+  toast(ok?'Guardado en todos tus dispositivos':'Guardado solo en este dispositivo');
 }
 function callPhone(i){var n=notes[i];if(n&&n.phone)location.href='tel:+'+cleanPhone(n.phone);}
 function tap(ds){
