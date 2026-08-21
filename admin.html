@@ -394,7 +394,7 @@ function cfgSheet(){
   for(var k in CFG_DEF){
     h+='<div class="fg"><label>'+CFG_LBL[k]+'</label><input id="cf-'+k+'" type="text" value="'+String(c[k]||'').replace(/"/g,'&quot;')+'"'+(k==='video'?' placeholder="Pega aqui el enlace del video"':'')+'></div>';
   }
-  h+='<div style="background:#eef8f2;border:1.5px solid #b6e0cb;border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem">'+'<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#2a7a52;font-weight:700;margin-bottom:.4rem">Subir el video del cajetin</div>'+'<input id="cf-file" type="file" accept="video/*" style="font-size:.8rem;width:100%">'+'<button class="btn green" style="width:100%;margin-top:.5rem" onclick="subirVideo()">Subir a la web</button>'+'<div style="font-size:.68rem;color:#5a8a9a;margin-top:.4rem">Maximo 4 MB. Al subirlo se rellena solo el enlace del video.</div></div>';
+  h+='<div style="background:#eef8f2;border:1.5px solid #b6e0cb;border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem">'+'<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#2a7a52;font-weight:700;margin-bottom:.4rem">Subir el video del cajetin</div>'+'<input id="cf-file" type="file" accept="video/*" style="font-size:.8rem;width:100%">'+'<button id="cf-btn" class="btn green" style="width:100%;margin-top:.5rem" onclick="subirVideo()">Subir a la web</button>'+'<div style="font-size:.68rem;color:#5a8a9a;margin-top:.4rem">Sirve el video tal cual lo tengas en el movil. Al subirlo se rellena solo el enlace.</div></div>';
   h+='<div style="border-top:1px solid #e0eef5;margin:.6rem 0 .8rem;padding-top:.6rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#5a8a9a;font-weight:700">Textos</div>';
   MSG_DEF.forEach(function(m){
     h+='<div class="fg"><label>'+m.ico+' '+m.t+'</label><textarea id="mt-'+m.id+'" rows="4" style="width:100%;background:#f0f7fa;border:1.5px solid #c0ddf0;border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;color:#1a3a4a">'+esc(msgText(m.id))+'</textarea></div>';
@@ -404,16 +404,26 @@ function cfgSheet(){
 }
 async function subirVideo(){
   var el=document.getElementById('cf-file'); var f=el&&el.files&&el.files[0];
-  if(!f){toast('Elige primero el archivo');return;}
-  if(f.size>4*1024*1024){alert('El video pesa '+(f.size/1048576).toFixed(1)+' MB y el maximo son 4 MB. Mandamelo y lo comprimo.');return;}
-  toast('Subiendo...');
-  var d=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]);};r.onerror=rej;r.readAsDataURL(f);});
-  var r=null;
-  try{ r=await fetch('/.netlify/functions/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd,name:'llave',mime:f.type||'video/mp4',data:d})}); }catch(e){}
-  if(r&&r.ok){
+  if(!f){toast('Elige primero el video');return;}
+  if(f.size>30*1024*1024){alert('El video pesa '+(f.size/1048576).toFixed(1)+' MB. Graba uno mas corto (con 20 o 30 segundos sobra).');return;}
+  var btn=document.getElementById('cf-btn'); if(btn){btn.disabled=true;btn.textContent='Subiendo...';}
+  function prog(s){ if(btn)btn.textContent=s; }
+  try{
+    var b64=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]);};r.onerror=rej;r.readAsDataURL(f);});
+    var CH=2600000;
+    var total=Math.ceil(b64.length/CH);
+    for(var i=0;i<total;i++){
+      prog(total>1?('Subiendo '+(i+1)+' de '+total+'...'):'Subiendo...');
+      var r=null;
+      try{ r=await fetch('/.netlify/functions/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd,name:'llave',mime:f.type||'video/mp4',idx:i,total:total,data:b64.slice(i*CH,(i+1)*CH)})}); }catch(e){}
+      if(!r||!r.ok){ var det=''; try{ det=(await r.text()).slice(0,120); }catch(e){}
+        alert('No se pudo subir el video.'+(det?'\n\n'+det:'')); prog('Subir a la web'); if(btn)btn.disabled=false; return; }
+    }
     var vi=document.getElementById('cf-video'); if(vi)vi.value='https://acasitadecris.com/llave.html';
-    toast('Video subido');
-  } else { toast('Error al subir el video'); }
+    prog('Subido correctamente');
+    toast('Video subido. Pulsa Guardar.');
+  }catch(e){ alert('Error: '+e.message); prog('Subir a la web'); }
+  if(btn)btn.disabled=false;
 }
 function cfgSave(){
   var c={};
