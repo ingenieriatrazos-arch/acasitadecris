@@ -121,7 +121,7 @@ li .x{background:none;border:none;color:#e05a5a;font-size:1.1rem;padding:0 .2rem
       <button class="btn amber" onclick="noteOnly()">Solo nota</button>
     </div>
     <p style="font-size:.68rem;color:#5a8a9a;margin-top:.5rem">Tambien puedes tocar en el calendario la fecha de inicio y luego la de fin para cerrar un periodo.</p>
-    <button class="tpl" onclick="editTpl()">&#9998; Editar plantilla de WhatsApp</button>
+    <button class="tpl" onclick="cfgSheet()">&#9881; Mensajes de WhatsApp y enlaces</button>
   </div>
   <div class="card">
     <h2>Proximas ocupaciones</h2>
@@ -137,9 +137,28 @@ var selStart=null;
 var now=new Date(); now.setHours(0,0,0,0);
 var vy=now.getFullYear(), vm=now.getMonth();
 var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-var TPL_DEF='Hola {nombre}, soy Roberto de A Casiña de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 12:00. Cualquier duda, escríbeme por aquí. ¡Gracias! El código de entrada es 260000 y la wifi podéis verla en la parte de atrás del router :) Antes de llegar, completad el check-in online aquí: https://acasitadecris.com/checkin.html';
-function getTpl(){try{return localStorage.getItem('watpl')||TPL_DEF;}catch(e){return TPL_DEF;}}
-function editTpl(){var t=prompt('Plantilla del WhatsApp. Puedes usar {nombre}, {desde} y {hasta}:',getTpl());if(t!==null){try{localStorage.setItem('watpl',t);}catch(e){}toast('Plantilla guardada');}}
+var CFG_DEF={
+  codigo:'260000',
+  checkin:'https://acasitadecris.com/checkin.html',
+  video:'',
+  mapa:'https://www.google.com/maps?q=42.617371,-8.876263',
+  guia:'https://acasitadecris.com/guia.html'
+};
+var CFG_LBL={codigo:'Codigo del cajetin de la llave',checkin:'Enlace del check-in online',video:'Enlace del video de como abrir el cajetin',mapa:'Enlace de la ubicacion (mapa)',guia:'Enlace de la guia de la zona'};
+function cfg(){var c={};for(var k in CFG_DEF)c[k]=CFG_DEF[k];
+  try{var s=JSON.parse(localStorage.getItem('wacfg')||'{}');for(var j in s)if(s[j]!==undefined&&s[j]!=='')c[j]=s[j];}catch(e){}
+  return c;}
+var MSG_DEF=[
+ {id:'conf',t:'Confirmar reserva',ico:'\u2705',x:'Hola {nombre}, soy Roberto de A Casina de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 12:00. Cualquier duda, escribeme por aqui. Gracias!'},
+ {id:'chk',t:'Check-in online',ico:'\uD83D\uDCDD',x:'Hola {nombre}: antes de llegar teneis que completar el check-in online. Es obligatorio por ley y hay que registrar a todos los viajeros, tambien a los menores. Se hace en 2 minutos desde el movil:\n{checkin}\n\nNecesitais el DNI o pasaporte de cada persona. Si teneis cualquier problema, decidmelo y lo hago yo.'},
+ {id:'llave',t:'Llave y entrada',ico:'\uD83D\uDD11',x:'Hola {nombre}, os paso como entrar. La llave esta dentro del cajetin que hay en la puerta y el codigo es {codigo}. Aqui teneis un video corto de como se abre:\n{video}\n\nLa clave del wifi la teneis apuntada en la parte de atras del router. Podeis entrar a partir de las 16:00.'},
+ {id:'ubi',t:'Ubicacion',ico:'\uD83D\uDCCD',x:'Hola {nombre}, esta es la ubicacion exacta de la casa:\n{mapa}\n\nDireccion: Lugar de Cesar 41B, Boiro (A Coruna). Hay sitio para aparcar en la propia casa.'},
+ {id:'guia',t:'Que visitar cerca',ico:'\uD83C\uDFD6',x:'Hola {nombre}, os dejo una guia con las playas y los sitios que merecen la pena por aqui cerca, con los tiempos en coche desde la casa:\n{guia}\n\nSi quereis algo mas concreto (donde comer, rutas, mareas) preguntadme sin problema.'}
+];
+function msgTexts(){var o={};try{o=JSON.parse(localStorage.getItem('wamsgs')||'{}');}catch(e){}return o;}
+function msgText(id){var o=msgTexts();if(o[id])return o[id];for(var i=0;i<MSG_DEF.length;i++)if(MSG_DEF[i].id===id)return MSG_DEF[i].x;return '';}
+function msgSet(id,v){var o=msgTexts();o[id]=v;try{localStorage.setItem('wamsgs',JSON.stringify(o));}catch(e){}}
+function msgReset(){try{localStorage.removeItem('wamsgs');localStorage.removeItem('watpl');}catch(e){}toast('Textos restaurados');}
 function pad(n){return (n<10?'0':'')+n;}
 function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function addD(ds,n){var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]+n);return dstr(d);}
@@ -330,13 +349,63 @@ function delData(i){
 }
 function closeSheet(){document.getElementById('sheetbg').classList.remove('open');}
 function sheet(html){document.getElementById('sheet').innerHTML=html;document.getElementById('sheetbg').classList.add('open');}
-function waMsg(n){var nombre=(n.note||'').split(',')[0].trim()||'';return getTpl().split('{nombre}').join(nombre).split('{desde}').join(fmt(n.from)).split('{hasta}').join(fmt(n.to));}
+function waMsg(n,id){
+  var c=cfg(), nombre=(n.note||'').split(',')[0].trim()||'';
+  var t=msgText(id);
+  t=t.split('{nombre}').join(nombre).split('{desde}').join(fmt(n.from)).split('{hasta}').join(fmt(n.to));
+  for(var k in c)t=t.split('{'+k+'}').join(c[k]);
+  return t;
+}
+function waOpen(phone,msg){
+  var p=cleanPhone(phone), q='phone='+p+'&text='+encodeURIComponent(msg);
+  var web='https://api.whatsapp.com/send?'+q;
+  var fired=false;
+  var fb=setTimeout(function(){ if(!fired&&!document.hidden){ location.href=web; } },1400);
+  function stop(){fired=true;clearTimeout(fb);}
+  window.addEventListener('pagehide',stop,{once:true});
+  window.addEventListener('blur',stop,{once:true});
+  document.addEventListener('visibilitychange',function(){if(document.hidden)stop();},{once:true});
+  location.href='whatsapp://send?'+q;
+}
 function waSend(i){
-  var n=notes[i]; if(!n||!n.phone)return;
-  var msg=waMsg(n);
-  if(!confirm('Enviar WhatsApp a '+(n.note||n.phone)+'?\n\n"'+msg+'"\n\nSe abrira WhatsApp con el mensaje listo; solo tendras que pulsar enviar.'))return;
+  var n=notes[i]; if(!n||!n.phone){toast('Esa reserva no tiene telefono');return;}
+  var h='<h3>Enviar WhatsApp</h3><p style="color:#5a8a9a;font-size:.8rem">'+esc(n.note||'')+' &middot; '+esc(n.phone)+' &middot; '+fmt(n.from)+' &rarr; '+fmt(n.to)+'</p>';
+  h+='<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem">';
+  MSG_DEF.forEach(function(m){
+    h+='<button class="btn wa" style="width:100%;text-align:left;padding:.7rem .9rem" onclick="waPick('+i+',&quot;'+m.id+'&quot;)">'+m.ico+' '+m.t+'</button>';
+  });
+  h+='</div>';
+  h+='<div class="btns"><button class="btn gray" onclick="closeSheet()">Cerrar</button></div>';
+  sheet(h);
+}
+function waPick(i,id){
+  var n=notes[i]; if(!n)return;
+  var c=cfg(), t=msgText(id);
+  if(t.indexOf('{video}')>=0&&!c.video){ alert('Todavia no has puesto el enlace del video del cajetin.\n\nAbre "Mensajes de WhatsApp y enlaces" y pegalo ahi.'); return; }
+  var msg=waMsg(n,id);
+  if(!confirm('Enviar a '+(n.note||n.phone)+':\n\n'+msg+'\n\nSe abrira WhatsApp con el mensaje escrito; solo tendras que pulsar enviar.'))return;
   closeSheet();
-  window.open('https://wa.me/'+cleanPhone(n.phone)+'?text='+encodeURIComponent(msg),'_blank');
+  waOpen(n.phone,msg);
+}
+function cfgSheet(){
+  var c=cfg();
+  var h='<h3>Mensajes de WhatsApp y enlaces</h3><p style="font-size:.78rem;color:#5a8a9a">Los enlaces se insertan solos en los mensajes. Puedes usar {nombre}, {desde}, {hasta}, {codigo}, {checkin}, {video}, {mapa} y {guia}.</p>';
+  for(var k in CFG_DEF){
+    h+='<div class="fg"><label>'+CFG_LBL[k]+'</label><input id="cf-'+k+'" type="text" value="'+String(c[k]||'').replace(/"/g,'&quot;')+'"'+(k==='video'?' placeholder="Pega aqui el enlace del video"':'')+'></div>';
+  }
+  h+='<div style="border-top:1px solid #e0eef5;margin:.6rem 0 .8rem;padding-top:.6rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#5a8a9a;font-weight:700">Textos</div>';
+  MSG_DEF.forEach(function(m){
+    h+='<div class="fg"><label>'+m.ico+' '+m.t+'</label><textarea id="mt-'+m.id+'" rows="4" style="width:100%;background:#f0f7fa;border:1.5px solid #c0ddf0;border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;color:#1a3a4a">'+esc(msgText(m.id))+'</textarea></div>';
+  });
+  h+='<div class="btns"><button class="btn green" onclick="cfgSave()">Guardar</button><button class="btn amber" onclick="if(confirm(&quot;Restaurar los textos originales?&quot;)){msgReset();cfgSheet();}">Restaurar textos</button><button class="btn gray" onclick="closeSheet()">Cerrar</button></div>';
+  sheet(h);
+}
+function cfgSave(){
+  var c={};
+  for(var k in CFG_DEF){var e=document.getElementById('cf-'+k);c[k]=e?e.value.trim():CFG_DEF[k];}
+  try{localStorage.setItem('wacfg',JSON.stringify(c));}catch(e){}
+  MSG_DEF.forEach(function(m){var e=document.getElementById('mt-'+m.id);if(e)msgSet(m.id,e.value);});
+  closeSheet(); toast('Guardado');
 }
 function callPhone(i){var n=notes[i];if(n&&n.phone)location.href='tel:+'+cleanPhone(n.phone);}
 function tap(ds){
