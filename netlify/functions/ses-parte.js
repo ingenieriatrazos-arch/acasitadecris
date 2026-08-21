@@ -181,7 +181,7 @@ function muniXml(p,d){
   try{ pais3=iso3((p&&p.pais)||(d&&d.pais)||'ESP'); }catch(e){ pais3='ESP'; }
   if(pais3==='ESP'){
     var cod=ineMunicipio(nom,cp);
-    if(cod)return '<codigoMunicipio>'+cod+'</codigoMunicipio>'+(nom?'<nombreMunicipio>'+esc(nom)+'</nombreMunicipio>':'');
+    if(cod)return '<codigoMunicipio>'+cod+'</codigoMunicipio>';
   }
   return nom?('<nombreMunicipio>'+esc(nom)+'</nombreMunicipio>'):'';
 }
@@ -192,7 +192,7 @@ function personaXml(p, rol, defaults){
   const ap=String(p.apellidos||'').trim().split(/\s+/);
   const a1=p.apellido1||ap[0]||'';
   const a2=p.apellido2||ap.slice(1).join(' ');
-  let x='<persona><rol>'+rol+'</rol>';
+  let x='<persona><rol>VI</rol>';
   x+='<nombre>'+esc(p.nombre)+'</nombre><apellido1>'+esc(a1)+'</apellido1>';
   if(a2)x+='<apellido2>'+esc(a2)+'</apellido2>';
   if(doc){x+='<tipoDocumento>'+td+'</tipoDocumento><numeroDocumento>'+esc(doc)+'</numeroDocumento>';
@@ -261,6 +261,14 @@ exports.handler = async function(event){
         const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
         return{statusCode:200,headers,body:JSON.stringify({ok:true,data:d||null})};
       }
+      if(_b.op==='previsualizar'){
+        const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
+        if(!d)return{statusCode:404,headers,body:JSON.stringify({error:'Sin datos guardados'})};
+        const fx=_b.fix||{};
+        const t2=Object.assign({},d.titular||{},fx);
+        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:d.acompanantes||[],menores:d.menores||[],dry:true,password:_b.password});
+        return await exports.handler({httpMethod:'POST',body:b2,headers:{}});
+      }
       if(_b.op==='reenviar'){
         const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
         if(!d)return{statusCode:404,headers,body:JSON.stringify({error:'No hay datos guardados de ese parte'})};
@@ -301,6 +309,9 @@ exports.handler = async function(event){
     xml+='<pago><tipoPago>'+tipoPago+'</tipoPago></pago>';
     xml+='</contrato>'+personas.join('')+'</comunicacion></solicitud></alt:peticion>';
 
+    if(_b&&_b.dry&&_b.password===process.env.ADMIN_PASSWORD){
+      return {statusCode:200,headers,body:JSON.stringify({ok:true,xml:xml})};
+    }
     const zip=makeZip('parte.xml',Buffer.from(xml,'utf8'));
     const b64=zip.toString('base64');
     const cab='<cabecera><codigoArrendador>'+esc(process.env.SES_ARRENDADOR||'')+'</codigoArrendador><aplicacion>CasinaWeb</aplicacion><tipoOperacion>A</tipoOperacion><tipoComunicacion>PV</tipoComunicacion></cabecera>';
