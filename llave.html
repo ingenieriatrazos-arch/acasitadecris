@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Cómo abrir el cajetín de la llave · A Casiña de Cris</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#f0f7fa;color:#1a3a4a;line-height:1.6}
+header{background:linear-gradient(135deg,#0a2d40,#1a6a8f);color:#fff;padding:1.6rem 1.2rem;text-align:center}
+header .kick{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;opacity:.8}
+header h1{font-size:1.35rem;font-weight:800;margin-top:.35rem}
+main{max-width:34rem;margin:0 auto;padding:1.2rem 1rem 3rem}
+video{width:100%;border-radius:14px;background:#000;display:block;border:1.5px solid #d0e8f5}
+.err{background:#fff;border:1.5px solid #f0c0c0;border-radius:14px;padding:1rem;color:#a04040;font-size:.9rem;display:none}
+ol{margin:1.2rem 0 0;padding-left:0;list-style:none;counter-reset:s}
+ol li{counter-increment:s;background:#fff;border:1.5px solid #d0e8f5;border-radius:12px;padding:.8rem .9rem .8rem 3rem;margin-bottom:.6rem;position:relative;font-size:.92rem}
+ol li:before{content:counter(s);position:absolute;left:.85rem;top:.8rem;width:1.5rem;height:1.5rem;border-radius:50%;background:#1a6a8f;color:#fff;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.tip{background:#fff8e8;border:1.5px solid #f0d79a;border-radius:12px;padding:.85rem 1rem;margin-top:1rem;font-size:.87rem;color:#6a4a10}
+.links{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.2rem}
+.links a{flex:1;min-width:9rem;text-align:center;background:#1a6a8f;color:#fff;text-decoration:none;font-weight:700;font-size:.85rem;padding:.7rem .6rem;border-radius:10px}
+.links a.alt{background:#4caf82}
+footer{text-align:center;color:#5a8a9a;font-size:.78rem;padding:0 1rem 2rem}
+</style>
+</head>
+<body>
+<header>
+  <div class="kick">A Casiña de Cris · Boiro</div>
+  <h1>Cómo abrir el cajetín de la llave</h1>
+</header>
+<main>
+  <video id="v" controls playsinline preload="metadata">
+    <source src="/video/llave.mp4" type="video/mp4">
+  </video>
+  <div class="err" id="err">El vídeo todavía no está disponible. Escríbenos por WhatsApp y te lo mandamos.</div>
+  <ol>
+    <li>El cajetín negro está en el muro de la entrada, justo debajo del número <b>41B</b>.</li>
+    <li>Desliza la tapa hacia arriba: debajo aparece el teclado numérico.</li>
+    <li>Marca el código que te hemos enviado por WhatsApp.</li>
+    <li>Abre la tapa inferior tirando hacia abajo. Dentro están las llaves.</li>
+    <li>Al marcharos, dejad las llaves dentro, cerrad el cajetín y bajad la tapa del teclado.</li>
+  </ol>
+  <div class="tip"><b>La clave del wifi</b> está apuntada en la parte de atrás del router. La entrada es a partir de las 16:00 y la salida antes de las 12:00.</div>
+  <div class="links">
+    <a href="https://www.google.com/maps?q=42.617371,-8.876263" target="_blank" rel="noopener">📍 Cómo llegar</a>
+    <a class="alt" href="/guia.html">🏖 Qué visitar cerca</a>
+  </div>
+</main>
+<footer>A Casiña de Cris · Lugar de César 41B · Boiro (A Coruña)</footer>
+<script>
+document.getElementById('v').addEventListener('error',function(){
+  this.style.display='none';
+  document.getElementById('err').style.display='block';
+},true);
+</script>
+</body>
+</html>

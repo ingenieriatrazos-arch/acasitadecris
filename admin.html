@@ -149,11 +149,12 @@ function cfg(){var c={};for(var k in CFG_DEF)c[k]=CFG_DEF[k];
   try{var s=JSON.parse(localStorage.getItem('wacfg')||'{}');for(var j in s)if(s[j]!==undefined&&s[j]!=='')c[j]=s[j];}catch(e){}
   return c;}
 var MSG_DEF=[
- {id:'conf',t:'Confirmar reserva',ico:'\u2705',x:'Hola {nombre}, soy Roberto de A Casiña de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}. La entrada es a partir de las 16:00 y la salida antes de las 12:00. Cualquier duda, escríbeme por aquí. ¡Gracias!'},
- {id:'chk',t:'Check-in online',ico:'\uD83D\uDCDD',x:'Hola {nombre}: antes de llegar tenéis que completar el check-in online. Es obligatorio por ley y hay que registrar a todos los viajeros, también a los menores. Se hace en 2 minutos desde el móvil:\n{checkin}\n\nNecesitáis el DNI o pasaporte de cada persona. Si tenéis cualquier problema, decídmelo y lo hago yo.'},
- {id:'llave',t:'Llave y entrada',ico:'\uD83D\uDD11',x:'Hola {nombre}, os paso cómo entrar. La llave está dentro del cajetín que hay en la puerta y el código es {codigo}. Aquí tenéis un vídeo corto de cómo se abre:\n{video}\n\nLa clave del wifi la tenéis apuntada en la parte de atrás del router. Podéis entrar a partir de las 16:00.'},
- {id:'ubi',t:'Ubicación',ico:'\uD83D\uDCCD',x:'Hola {nombre}, esta es la ubicación exacta de la casa:\n{mapa}\n\nDirección: Lugar de César 41B, Boiro (A Coruña). Hay sitio para aparcar en la propia casa.'},
- {id:'guia',t:'Qué visitar cerca',ico:'\uD83C\uDFD6',x:'Hola {nombre}, os dejo una guía con las playas y los sitios que merecen la pena por aquí cerca, con los tiempos en coche desde la casa:\n{guia}\n\nSi queréis algo más concreto (dónde comer, rutas, mareas) preguntadme sin problema.'}
+ {id:'conf',t:'Confirmar reserva + check-in',ico:'\u2705',x:'Hola {nombre}, soy Roberto de A Casi\u00f1a de Cris (Boiro). Te confirmo la reserva del {desde} al {hasta}: entrada a partir de las 16:00 y salida antes de las 12:00.\n\nAntes de llegar ten\u00e9is que completar el check-in online. Es obligatorio por ley y hay que registrar a todos los viajeros, tambi\u00e9n a los menores (necesit\u00e1is el DNI o pasaporte de cada uno). Se hace en 2 minutos desde el m\u00f3vil:\n{checkin}\n\nEn cuanto lo teng\u00e1is hecho os mando el v\u00eddeo de c\u00f3mo abrir el cajet\u00edn de la llave, la ubicaci\u00f3n exacta y una gu\u00eda de la zona. \u00a1Gracias!'},
+ {id:'pack',t:'Acceso completo (tras el check-in)',ico:'\uD83D\uDD13',x:'Hola {nombre}, ya ten\u00e9is el check-in hecho, as\u00ed que os paso todo lo del acceso:\n\n\uD83D\uDD11 La llave est\u00e1 en el cajet\u00edn de la puerta y el c\u00f3digo es {codigo}. Aqu\u00ed ten\u00e9is el v\u00eddeo de c\u00f3mo se abre:\n{video}\n\n\uD83D\uDCCD Ubicaci\u00f3n exacta de la casa:\n{mapa}\n\n\uD83C\uDFD6 Y una gu\u00eda con las playas y los sitios que merecen la pena cerca:\n{guia}\n\nLa clave del wifi est\u00e1 apuntada detr\u00e1s del router. Pod\u00e9is entrar a partir de las 16:00. \u00a1Buen viaje!'},
+ {id:'llave',t:'Solo la llave',ico:'\uD83D\uDD11',x:'Hola {nombre}, os paso c\u00f3mo entrar. La llave est\u00e1 dentro del cajet\u00edn que hay en la puerta y el c\u00f3digo es {codigo}. Aqu\u00ed ten\u00e9is un v\u00eddeo corto de c\u00f3mo se abre:\n{video}\n\nLa clave del wifi la ten\u00e9is apuntada en la parte de atr\u00e1s del router. Pod\u00e9is entrar a partir de las 16:00.'},
+ {id:'ubi',t:'Solo la ubicaci\u00f3n',ico:'\uD83D\uDCCD',x:'Hola {nombre}, esta es la ubicaci\u00f3n exacta de la casa:\n{mapa}\n\nDirecci\u00f3n: Lugar de C\u00e9sar 41B, Boiro (A Coru\u00f1a). Hay sitio para aparcar en la propia casa.'},
+ {id:'guia',t:'Solo la gu\u00eda de la zona',ico:'\uD83C\uDFD6',x:'Hola {nombre}, os dejo una gu\u00eda con las playas y los sitios que merecen la pena por aqu\u00ed cerca, con los tiempos en coche desde la casa:\n{guia}\n\nSi quer\u00e9is algo m\u00e1s concreto (d\u00f3nde comer, rutas, mareas) preguntadme sin problema.'},
+ {id:'recuerda',t:'Recordar el check-in',ico:'\u23F0',x:'Hola {nombre}, un recordatorio: todav\u00eda no me consta vuestro check-in online y lo necesito antes de que lleg\u00e9is para poder registrar la entrada. Son 2 minutos:\n{checkin}\n\nEn cuanto lo teng\u00e1is os mando el v\u00eddeo del cajet\u00edn de la llave y la ubicaci\u00f3n. Gracias!'}
 ];
 function msgTexts(){var o={};try{o=JSON.parse(localStorage.getItem('wamsgs')||'{}');}catch(e){}return o;}
 function msgText(id){var o=msgTexts();if(o[id])return o[id];for(var i=0;i<MSG_DEF.length;i++)if(MSG_DEF[i].id===id)return MSG_DEF[i].x;return '';}
@@ -393,12 +394,26 @@ function cfgSheet(){
   for(var k in CFG_DEF){
     h+='<div class="fg"><label>'+CFG_LBL[k]+'</label><input id="cf-'+k+'" type="text" value="'+String(c[k]||'').replace(/"/g,'&quot;')+'"'+(k==='video'?' placeholder="Pega aqui el enlace del video"':'')+'></div>';
   }
+  h+='<div style="background:#eef8f2;border:1.5px solid #b6e0cb;border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem">'+'<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#2a7a52;font-weight:700;margin-bottom:.4rem">Subir el video del cajetin</div>'+'<input id="cf-file" type="file" accept="video/*" style="font-size:.8rem;width:100%">'+'<button class="btn green" style="width:100%;margin-top:.5rem" onclick="subirVideo()">Subir a la web</button>'+'<div style="font-size:.68rem;color:#5a8a9a;margin-top:.4rem">Maximo 4 MB. Al subirlo se rellena solo el enlace del video.</div></div>';
   h+='<div style="border-top:1px solid #e0eef5;margin:.6rem 0 .8rem;padding-top:.6rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#5a8a9a;font-weight:700">Textos</div>';
   MSG_DEF.forEach(function(m){
     h+='<div class="fg"><label>'+m.ico+' '+m.t+'</label><textarea id="mt-'+m.id+'" rows="4" style="width:100%;background:#f0f7fa;border:1.5px solid #c0ddf0;border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;color:#1a3a4a">'+esc(msgText(m.id))+'</textarea></div>';
   });
   h+='<div class="btns"><button class="btn green" onclick="cfgSave()">Guardar</button><button class="btn amber" onclick="if(confirm(&quot;Restaurar los textos originales?&quot;)){msgReset();cfgSheet();}">Restaurar textos</button><button class="btn gray" onclick="closeSheet()">Cerrar</button></div>';
   sheet(h);
+}
+async function subirVideo(){
+  var el=document.getElementById('cf-file'); var f=el&&el.files&&el.files[0];
+  if(!f){toast('Elige primero el archivo');return;}
+  if(f.size>4*1024*1024){alert('El video pesa '+(f.size/1048576).toFixed(1)+' MB y el maximo son 4 MB. Mandamelo y lo comprimo.');return;}
+  toast('Subiendo...');
+  var d=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]);};r.onerror=rej;r.readAsDataURL(f);});
+  var r=null;
+  try{ r=await fetch('/.netlify/functions/media',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd,name:'llave',mime:f.type||'video/mp4',data:d})}); }catch(e){}
+  if(r&&r.ok){
+    var vi=document.getElementById('cf-video'); if(vi)vi.value='https://acasitadecris.com/llave.html';
+    toast('Video subido');
+  } else { toast('Error al subir el video'); }
 }
 function cfgSave(){
   var c={};

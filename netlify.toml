@@ -11,6 +11,11 @@
   schedule = "0 7 * * 1"
 
 [[redirects]]
+  from = "/video/llave.mp4"
+  to = "/.netlify/functions/media?name=llave"
+  status = 200
+
+[[redirects]]
   from = "/booking.ics"
   to = "/.netlify/functions/export-ical?src=booking"
   status = 200
