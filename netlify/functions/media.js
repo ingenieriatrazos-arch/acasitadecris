@@ -71,6 +71,19 @@ exports.handler = async function (event) {
     if (body.password !== process.env.ADMIN_PASSWORD) {
       return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'No autorizado' }) };
     }
+    if (body.op === 'cfg-get') {
+      const c = await store.get('config-panel', { type: 'json' });
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, data: c || null }) };
+    }
+    if (body.op === 'cfg-set') {
+      await store.setJSON('config-panel', {
+        cfg: body.cfg || {},
+        msgs: body.msgs || {},
+        at: new Date().toISOString()
+      });
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
     const key = clean(body.name, 'llave');
     const mime = String(body.mime || 'video/mp4').slice(0, 60);
     const data = Buffer.from(String(body.data || ''), 'base64');
