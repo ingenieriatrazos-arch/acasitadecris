@@ -195,7 +195,7 @@ function personaXml(p, rol, defaults){
   let x='<persona><rol>VI</rol>';
   x+='<nombre>'+esc(p.nombre)+'</nombre><apellido1>'+esc(a1)+'</apellido1>';
   if(a2)x+='<apellido2>'+esc(a2)+'</apellido2>';
-  if(doc){x+='<tipoDocumento>'+td+'</tipoDocumento><numeroDocumento>'+esc(doc)+'</numeroDocumento>';
+  if(doc&&!(p._menor&&!p.soporte)){x+='<tipoDocumento>'+td+'</tipoDocumento><numeroDocumento>'+esc(doc)+'</numeroDocumento>';
     if(p.soporte&&(td==='NIF'||td==='NIE'))x+='<soporteDocumento>'+esc(String(p.soporte).toUpperCase().replace(/[^A-Z0-9]/g,''))+'</soporteDocumento>';}
   x+='<fechaNacimiento>'+parseFecha(p.nacimiento)+'</fechaNacimiento>';
   x+='<nacionalidad>'+iso3(p.nacionalidad)+'</nacionalidad>';
@@ -291,10 +291,24 @@ exports.handler = async function(event){
     const mens=(menores||[]).filter(function(m){return m&&m.nombre;});
     const tit=Object.assign({},titular);
     if(mens.length){ tit.parentesco = codParentesco(mens[0].parentesco) || 'PM'; }
-    if(!mens.length)delete tit.parentesco;
+        const _faltan=[];
+    [tit].concat(acompanantes||[]).forEach(function(p){
+      if(!p||!p.nombre&&!p.nombreCompleto)return;
+      const _doc=String(p.dni||'').trim();
+      const _td=String(p.tipoDoc||'').toUpperCase();
+      const _quien=String(p.nombreCompleto||((p.nombre||'')+' '+(p.apellido1||''))).trim()||'un viajero';
+      if(_doc&&(_td==='DNI'||_td==='NIF'||_td==='NIE'||!_td)&&!String(p.soporte||'').trim()){
+        _faltan.push(_quien+': falta el numero de soporte del documento');
+      }
+      if(!String(p.nacimiento||'').trim())_faltan.push(_quien+': falta la fecha de nacimiento');
+    });
+    if(_faltan.length){
+      return {statusCode:400,headers,body:JSON.stringify({error:'Faltan datos obligatorios para el parte de viajeros',detalle:_faltan})};
+    }
+if(!mens.length)delete tit.parentesco;
     const personas=[personaXml(tit,'TI',defaults)]
       .concat((acompanantes||[]).map(function(a){ var aa=Object.assign({},a); if(!mens.length)delete aa.parentesco; return personaXml(aa,'VI',defaults); }))
-      .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; return personaXml(mm,'VI',defaults); }));
+      .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; mm._menor=true; return personaXml(mm,'VI',defaults); }));
     const nPers=1+(acompanantes||[]).length+mens.length;
     const ref='WEB-'+ci.replace(/-/g,'')+'-'+Date.now().toString(36).toUpperCase();
     const hoy=new Date().toISOString().slice(0,10);
