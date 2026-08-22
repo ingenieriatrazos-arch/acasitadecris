@@ -338,6 +338,7 @@ function renderPartes(){
   +'<div style="font-size:.72rem;color:#5a8a9a">Ojo: <b>ENVIADO</b> solo significa que Hospedajes recibio el fichero. Si despues te llega un correo de error, el parte NO cuenta como presentado: corrige el dato aqui y reenvialo.</div>';
   card.style.display='block';
 }
+var parteDatos=null;
 async function parteFix(k){
   toast('Cargando datos...');
   var d=null;
@@ -345,27 +346,57 @@ async function parteFix(k){
     var r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'datos',password:pwd,key:k})});
     if(r&&r.ok){var j=await r.json(); d=j.data;}
   }catch(e){}
-  if(!d){alert('No hay datos guardados de ese parte. Se guardan a partir de ahora, asi que este habra que rehacerlo desde el formulario de check-in.');return;}
+  if(!d){alert('No hay datos guardados de ese parte. Habra que rehacerlo desde el formulario de check-in.');return;}
+  parteDatos=d;
   var ti=d.titular||{};
+  var lista=[ti].concat(d.acompanantes||[]).concat(d.menores||[]);
   var h='<h3>Corregir y reenviar parte</h3>';
-  h+='<p style="font-size:.8rem;color:#5a8a9a">'+esc(ti.nombreCompleto||ti.nombre||'')+' &middot; '+fmtx(d.reserva&&d.reserva.checkin)+' &rarr; '+fmtx(d.reserva&&d.reserva.checkout)+'</p>';
-  h+='<p style="font-size:.78rem;color:#a04040">'+esc(d.desc||'')+'</p>';
+  h+='<p style="font-size:.8rem;color:#5a8a9a">'+fmtx(d.reserva&&d.reserva.checkin)+' &rarr; '+fmtx(d.reserva&&d.reserva.checkout)+' &middot; '+lista.length+' viajeros</p>';
+  if(d.desc)h+='<p style="font-size:.78rem;color:#a04040">'+esc(d.desc)+'</p>';
   h+='<div class="fg"><label>Direccion</label><input id="px-dir" type="text" value="'+String(ti.direccion||'').replace(/"/g,'&quot;')+'"></div>';
-  h+='<div class="fg"><label>Municipio</label><input id="px-mun" type="text" value="'+String(ti.municipio||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Boiro"></div>';
+  h+='<div class="fg"><label>Municipio</label><input id="px-mun" type="text" value="'+String(ti.municipio||'').replace(/"/g,'&quot;')+'" placeholder="Ej: Madrid"></div>';
   h+='<div class="fg"><label>Codigo postal</label><input id="px-cp" type="text" value="'+String(ti.cp||'').replace(/"/g,'&quot;')+'"></div>';
-  h+='<div class="btns"><button class="btn green" id="px-btn" onclick="parteSend(&quot;'+k+'&quot;)">Reenviar a Interior</button><button class="btn gray" onclick="closeSheet()">Cancelar</button></div>';
+  h+='<div style="border-top:1px solid #e0eef5;margin:.7rem 0 .6rem;padding-top:.6rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#5a8a9a;font-weight:700">Documentos</div>';
+  lista.forEach(function(p,i){
+    var nom=String(p.nombreCompleto||((p.nombre||'')+' '+(p.apellido1||''))).trim()||('Viajero '+(i+1));
+    h+='<div style="background:#f6fbfd;border:1px solid #dbeef7;border-radius:10px;padding:.6rem .7rem;margin-bottom:.5rem">'
+      +'<div style="font-weight:700;font-size:.85rem;margin-bottom:.4rem">'+esc(nom)+'</div>'
+      +'<div class="fg" style="margin-bottom:.4rem"><label>Nº de documento</label><input id="pd-'+i+'" type="text" value="'+String(p.dni||'').replace(/"/g,'&quot;')+'"></div>'
+      +'<div class="fg" style="margin-bottom:0"><label>Nº de soporte'+(p.soporte?'':' (falta)')+'</label><input id="ps-'+i+'" type="text" value="'+String(p.soporte||'').replace(/"/g,'&quot;')+'" placeholder="Ej: ABC123456"></div>'
+      +'</div>';
+  });
+  h+='<div class="btns"><button class="btn blue" style="width:auto;flex:1" id="px-prev" onclick="parteVer(&quot;'+k+'&quot;)">Comprobar</button></div>';
+  h+='<div class="btns" style="margin-top:.5rem"><button class="btn green" id="px-btn" onclick="parteSend(&quot;'+k+'&quot;)">Reenviar a Interior</button><button class="btn gray" onclick="closeSheet()">Cancelar</button></div>';
   sheet(h);
+}
+function parteFixData(){
+  var lista=[(parteDatos&&parteDatos.titular)||{}].concat((parteDatos&&parteDatos.acompanantes)||[]).concat((parteDatos&&parteDatos.menores)||[]);
+  var personas=lista.map(function(p,i){
+    var s=document.getElementById('ps-'+i), dd=document.getElementById('pd-'+i);
+    return {soporte:s?s.value.trim():'', dni:dd?dd.value.trim():''};
+  });
+  return {
+    fix:{direccion:(document.getElementById('px-dir')||{}).value||'',municipio:(document.getElementById('px-mun')||{}).value||'',cp:(document.getElementById('px-cp')||{}).value||''},
+    personas:personas
+  };
+}
+async function parteVer(k){
+  var f=parteFixData();
+  var r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'previsualizar',password:pwd,key:k,fix:f.fix,personas:f.personas})});
+  var j=null; try{ j=await r.json(); }catch(e){}
+  if(r.ok&&j&&j.xml){
+    var docs=(j.xml.match(/<numeroDocumento>/g)||[]).length, sop=(j.xml.match(/<soporteDocumento>/g)||[]).length, per=(j.xml.match(/<persona>/g)||[]).length, mun=(j.xml.match(/<codigoMunicipio>(\d+)<\/codigoMunicipio>/)||[])[1];
+    alert('Comprobacion correcta:\n\n'+per+' viajeros\n'+docs+' con documento\n'+sop+' con numero de soporte\nMunicipio INE: '+(mun||'-')+'\n\nSi te cuadra, pulsa Reenviar a Interior.');
+  } else {
+    alert('Faltan datos:\n\n'+(((j&&j.detalle)||[]).join('\n')||(j&&j.error)||'error'));
+  }
 }
 async function parteSend(k){
   var b=document.getElementById('px-btn'); if(b){b.disabled=true;b.textContent='Enviando...';}
-  var fix={
-    direccion:document.getElementById('px-dir').value.trim(),
-    municipio:document.getElementById('px-mun').value.trim(),
-    cp:document.getElementById('px-cp').value.trim()
-  };
+  var _f=parteFixData(); var fix=_f.fix;
   var r=null,txt='';
   try{
-    r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'reenviar',password:pwd,key:k,fix:fix})});
+    r=await fetch('/.netlify/functions/ses-parte',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'reenviar',password:pwd,key:k,fix:fix,personas:_f.personas})});
     txt=await r.text();
   }catch(e){ txt=e.message; }
   var okk=false; try{ var j=JSON.parse(txt); okk=!!(j.ok||j.lote); }catch(e){}
