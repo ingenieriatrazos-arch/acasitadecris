@@ -185,6 +185,21 @@ function muniXml(p,d){
   }
   return nom?('<nombreMunicipio>'+esc(nom)+'</nombreMunicipio>'):'';
 }
+function edadEn(nac,refIso){
+  const f=parseFecha(nac); if(!f)return null;
+  const ref=new Date((refIso||new Date().toISOString().slice(0,10))+'T00:00:00Z');
+  const n=new Date(f+'T00:00:00Z');
+  let e=ref.getUTCFullYear()-n.getUTCFullYear();
+  const m=ref.getUTCMonth()-n.getUTCMonth();
+  if(m<0||(m===0&&ref.getUTCDate()<n.getUTCDate()))e--;
+  return e;
+}
+function exigeDocumento(p,refIso){
+  const e=edadEn(p&&p.nacimiento,refIso);
+  const nac=String((p&&p.nacionalidad)||'').toLowerCase();
+  const esES=!nac||nac.indexOf('esp')>=0||nac==='es';
+  return esES && e!==null && e>=14;
+}
 function personaXml(p, rol, defaults){
   const doc=String(p.dni||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const tdRaw=String(p.tipoDoc||'').toUpperCase();
@@ -265,18 +280,44 @@ exports.handler = async function(event){
         const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
         if(!d)return{statusCode:404,headers,body:JSON.stringify({error:'Sin datos guardados'})};
         const fx=_b.fix||{};
-        const t2=Object.assign({},d.titular||{},fx);
-        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:d.acompanantes||[],menores:d.menores||[],dry:true,password:_b.password});
+        const fp=_b.personas||[];
+        const ap=function(p,i){
+          const o=Object.assign({},p||{});
+          if(fx.municipio)o.municipio=fx.municipio;
+          if(fx.direccion)o.direccion=fx.direccion;
+          if(fx.cp)o.cp=fx.cp;
+          const f=fp[i]||{};
+          if(f.soporte)o.soporte=f.soporte;
+          if(f.dni)o.dni=f.dni;
+          return o;
+        };
+        const t2=ap(d.titular,0);
+        const acN=(d.acompanantes||[]).length;
+        const ac2=(d.acompanantes||[]).map(function(a,i){return ap(a,1+i);});
+        const mn2=(d.menores||[]).map(function(m,i){return ap(m,1+acN+i);});
+        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:ac2,menores:mn2,dry:true,password:_b.password});
         return await exports.handler({httpMethod:'POST',body:b2,headers:{}});
       }
       if(_b.op==='reenviar'){
         const d=await _st.get('parte-datos-'+_b.key,{type:'json'});
         if(!d)return{statusCode:404,headers,body:JSON.stringify({error:'No hay datos guardados de ese parte'})};
         const fx=_b.fix||{};
-        const t2=Object.assign({},d.titular||{},fx);
-        const ac=(d.acompanantes||[]).map(function(a){return Object.assign({},a,fx.municipio?{municipio:fx.municipio}:{});});
-        const mn=(d.menores||[]).map(function(a){return Object.assign({},a,fx.municipio?{municipio:fx.municipio}:{});});
-        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:ac,menores:mn});
+        const fp=_b.personas||[];
+        const ap=function(p,i){
+          const o=Object.assign({},p||{});
+          if(fx.municipio)o.municipio=fx.municipio;
+          if(fx.direccion)o.direccion=fx.direccion;
+          if(fx.cp)o.cp=fx.cp;
+          const f=fp[i]||{};
+          if(f.soporte)o.soporte=f.soporte;
+          if(f.dni)o.dni=f.dni;
+          return o;
+        };
+        const t2=ap(d.titular,0);
+        const acN=(d.acompanantes||[]).length;
+        const ac2=(d.acompanantes||[]).map(function(a,i){return ap(a,1+i);});
+        const mn2=(d.menores||[]).map(function(m,i){return ap(m,1+acN+i);});
+        const b2=JSON.stringify({reserva:d.reserva,titular:t2,acompanantes:ac2,menores:mn2});
         return await exports.handler({httpMethod:'POST',body:b2,headers:{}});
       }
       return{statusCode:400,headers,body:JSON.stringify({error:'Operacion desconocida'})};
@@ -292,11 +333,14 @@ exports.handler = async function(event){
     const tit=Object.assign({},titular);
     if(mens.length){ tit.parentesco = codParentesco(mens[0].parentesco) || 'PM'; }
         const _faltan=[];
-    [tit].concat(acompanantes||[]).forEach(function(p){
+    [tit].concat(acompanantes||[]).concat((mens||[]).filter(function(m){return exigeDocumento(m,ci);})).forEach(function(p){
       if(!p||!p.nombre&&!p.nombreCompleto)return;
       const _doc=String(p.dni||'').trim();
       const _td=String(p.tipoDoc||'').toUpperCase();
       const _quien=String(p.nombreCompleto||((p.nombre||'')+' '+(p.apellido1||''))).trim()||'un viajero';
+      if(!_doc&&exigeDocumento(p,ci)){
+        _faltan.push(_quien+': falta el numero de documento (obligatorio para espanoles de 14 anos o mas)');
+      }
       if(_doc&&(_td==='DNI'||_td==='NIF'||_td==='NIE'||!_td)&&!String(p.soporte||'').trim()){
         _faltan.push(_quien+': falta el numero de soporte del documento');
       }
@@ -308,7 +352,7 @@ exports.handler = async function(event){
 if(!mens.length)delete tit.parentesco;
     const personas=[personaXml(tit,'TI',defaults)]
       .concat((acompanantes||[]).map(function(a){ var aa=Object.assign({},a); if(!mens.length)delete aa.parentesco; return personaXml(aa,'VI',defaults); }))
-      .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; mm._menor=true; return personaXml(mm,'VI',defaults); }));
+      .concat(mens.map(function(m){ var mm=Object.assign({},m); delete mm.parentesco; mm._menor=!exigeDocumento(mm,ci); return personaXml(mm,'VI',defaults); }));
     const nPers=1+(acompanantes||[]).length+mens.length;
     const ref='WEB-'+ci.replace(/-/g,'')+'-'+Date.now().toString(36).toUpperCase();
     const hoy=new Date().toISOString().slice(0,10);
