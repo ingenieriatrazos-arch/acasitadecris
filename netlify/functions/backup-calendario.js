@@ -11,7 +11,24 @@ exports.handler = async function(){
     const checkins = (await store.get('checkins',{type:'json'})) || [];
 
     const hoy = todayMadrid();
-    const backup = { generado: new Date().toISOString(), ocupados, externos, partes, checkins };
+    let parteDatos = {};
+    try{
+      const { blobs } = await store.list({ prefix: 'parte-datos-' });
+      for(const b of (blobs||[])){
+        parteDatos[b.key] = await store.get(b.key, { type: 'json' });
+      }
+    }catch(e){ console.error('backup parte-datos:', e); }
+
+    let ajustes = null;
+    try{
+      const { getStore } = require('@netlify/blobs');
+      let ms;
+      try{ ms = getStore({ name:'media', consistency:'strong' }); }
+      catch(e){ ms = getStore({ name:'media', siteID:'d74f1b1b-aa23-4d68-b9c3-151e6eb458f9', token:process.env.NETLIFY_TOKEN, consistency:'strong' }); }
+      ajustes = await ms.get('config-panel', { type:'json' });
+    }catch(e){ console.error('backup ajustes:', e); }
+
+    const backup = { generado: new Date().toISOString(), ocupados, externos, partes, checkins, parteDatos, ajustes };
     const json = JSON.stringify(backup, null, 1);
     const b64 = Buffer.from(json,'utf8').toString('base64');
 
@@ -20,10 +37,11 @@ exports.handler = async function(){
       +' &middot; Booking: '+((externos.booking||[]).length)
       +' &middot; Airbnb: '+((externos.airbnb||[]).length)
       +' &middot; Partes enviados: '+((partes.items||[]).filter(function(p){return p.ok;}).length)
-      +' &middot; Check-ins: '+checkins.length;
+      +' &middot; Check-ins: '+checkins.length
+      +' &middot; Fichas de viajeros: '+Object.keys(parteDatos).length;
 
     const html='<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">'
-      +'<div style="background:#1a6a8f;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-weight:700">Copia de seguridad semanal</div>'
+      +'<div style="background:#1a6a8f;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-weight:700">Copia de seguridad diaria</div>'
       +'<div style="border:1px solid #d0e8f5;border-top:none;border-radius:0 0 10px 10px;padding:20px;font-size:14px;color:#1a3a4a">'
       +'<p>Adjunto la copia del calendario y los registros a fecha '+hoy+'.</p>'
       +'<p style="font-size:13px;color:#3a5a6a">'+resumen+'</p>'
